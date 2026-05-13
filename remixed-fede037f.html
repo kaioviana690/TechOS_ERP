@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>TechOS — Login</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap');
+:root{
+  --bg:#f0f2f5;--sidebar:#111827;--sh:#1f2937;--sa:#1d4ed8;
+  --card:#fff;--border:#e5e7eb;--text:#111827;--muted:#6b7280;
+  --accent:#1d4ed8;--al:#eff6ff;--green:#059669;--gl:#ecfdf5;
+  --orange:#d97706;--ol:#fffbeb;--red:#dc2626;--rl:#fef2f2;
+  --purple:#7c3aed;--pl:#f5f3ff;--teal:#0d9488;
+  --font:'Plus Jakarta Sans',sans-serif;--mono:'Fira Code',monospace;
+  --r:10px;--sw:240px;--swc:58px;
+  --shadow:0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.04);
+  --shadowlg:0 8px 32px rgba(0,0,0,.14);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh}
+
+/* ══ LOGIN SCREEN ══ */
+#login-screen{display:flex;min-height:100vh;align-items:center;justify-content:center;padding:20px;background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 50%,#111827 100%)}
+.login-box{background:var(--card);border-radius:20px;padding:40px 36px;width:100%;max-width:420px;box-shadow:0 24px 64px rgba(0,0,0,.35)}
+.login-logo{display:flex;align-items:center;gap:12px;margin-bottom:32px;justify-content:center}
+.login-logo-ico{width:48px;height:48px;background:var(--accent);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px}
+.login-logo-txt{font-size:22px;font-weight:800;color:var(--text)}
+.login-logo-txt small{display:block;font-size:11px;color:var(--muted);font-weight:400}
+.login-title{font-size:20px;font-weight:700;margin-bottom:6px}
+.login-sub{font-size:13px;color:var(--muted);margin-bottom:28px}
+.login-field{display:flex;flex-direction:column;gap:5px;margin-bottom:16px}
+.login-field label{font-size:12px;font-weight:600}
+.login-field input{padding:11px 14px;border:1.5px solid var(--border);border-radius:9px;font-family:var(--font);font-size:14px;outline:none;transition:border-color .15s}
+.login-field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(29,78,216,.1)}
+.login-btn{width:100%;padding:13px;background:var(--accent);color:#fff;border:none;border-radius:9px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;transition:background .15s;margin-top:6px}
+.login-btn:hover{background:#1e40af}
+.login-btn:disabled{background:#93c5fd;cursor:not-allowed}
+.login-err{background:var(--rl);color:var(--red);border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:14px;display:none}
+.login-err.show{display:block}
+.login-footer{text-align:center;margin-top:20px;font-size:11px;color:var(--muted)}
+.setup-link{color:var(--accent);cursor:pointer;text-decoration:underline;font-size:12px;margin-top:10px;display:block;text-align:center}
+
+/* ══ SETUP SCREEN ══ */
+#setup-screen{display:none;min-height:100vh;align-items:center;justify-content:center;padding:20px;background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 50%,#111827 100%)}
+.setup-box{background:var(--card);border-radius:20px;padding:32px;width:100%;max-width:500px;box-shadow:0 24px 64px rgba(0,0,0,.35)}
+.setup-box h2{font-size:18px;font-weight:800;margin-bottom:6px}
+.setup-box p{font-size:12px;color:var(--muted);margin-bottom:22px;line-height:1.6}
+.setup-field{display:flex;flex-direction:column;gap:4px;margin-bottom:14px}
+.setup-field label{font-size:11px;font-weight:600}
+.setup-field input{padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:var(--mono);font-size:13px;outline:none;transition:border-color .15s}
+.setup-field input:focus{border-color:var(--accent)}
+.setup-btns{display:flex;gap:8px;margin-top:6px}
+.setup-ok{flex:1;padding:11px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer}
+.setup-bk{padding:11px 16px;background:none;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;cursor:pointer;color:var(--muted)}
+.setup-info{background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:12px;font-size:12px;color:#166534;line-height:1.6;margin-bottom:16px}
+.setup-warn{background:var(--ol);border:1px solid #fde68a;border-radius:8px;padding:12px;font-size:12px;color:#92400e;line-height:1.6;margin-bottom:16px}
+
+/* ══ APP SHELL ══ */
+#app{display:none;flex;min-height:100vh;overflow:hidden}
+body.logged #login-screen{display:none}
+body.logged #app{display:flex}
+body.setup #login-screen{display:none}
+body.setup #setup-screen{display:flex}
+
+/* ══ SIDEBAR ══ */
+#sidebar{width:var(--sw);background:var(--sidebar);display:flex;flex-direction:column;flex-shrink:0;height:100vh;overflow-y:auto;overflow-x:hidden;transition:width .25s cubic-bezier(.4,0,.2,1);position:relative;z-index:50}
+#sidebar.collapsed{width:var(--swc)}
+.sb-logo{padding:14px 12px 12px;display:flex;align-items:center;gap:9px;border-bottom:1px solid rgba(255,255,255,.08);min-height:58px;flex-shrink:0;position:relative}
+.sb-icon{width:30px;height:30px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.sb-text{color:#fff;font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;transition:opacity .2s,width .25s}
+.sb-text small{display:block;font-size:9px;color:rgba(255,255,255,.35);font-weight:400}
+#sidebar.collapsed .sb-text{opacity:0;width:0}
+.sb-toggle{position:absolute;top:14px;right:-11px;width:22px;height:22px;background:var(--accent);border:2px solid #fff;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;z-index:60;transition:transform .25s;box-shadow:0 2px 8px rgba(0,0,0,.35);border:none}
+#sidebar.collapsed .sb-toggle{transform:rotate(180deg)}
+.nav-sec{padding:7px 6px 2px;flex-shrink:0}
+.nav-lbl{font-size:9px;color:rgba(255,255,255,.28);font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:0 8px;margin-bottom:3px;white-space:nowrap;transition:opacity .2s}
+#sidebar.collapsed .nav-lbl{opacity:0}
+.ni{display:flex;align-items:center;gap:8px;padding:8px 9px;border-radius:6px;cursor:pointer;color:rgba(255,255,255,.55);font-size:13px;font-weight:500;transition:all .15s;margin-bottom:2px;white-space:nowrap;position:relative}
+.ni:hover{background:var(--sh);color:#fff}
+.ni.active{background:var(--sa);color:#fff}
+.ni .ico{font-size:15px;flex-shrink:0;width:20px;text-align:center}
+.ni-txt{overflow:hidden;transition:opacity .2s}
+#sidebar.collapsed .ni-txt{opacity:0;width:0}
+.nbadge{margin-left:auto;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:10px;font-family:var(--mono);flex-shrink:0;transition:opacity .2s}
+#sidebar.collapsed .nbadge{opacity:0}
+#sidebar.collapsed .ni:hover::after{content:attr(data-tip);position:absolute;left:calc(var(--swc) + 8px);top:50%;transform:translateY(-50%);background:#1f2937;color:#fff;font-size:12px;padding:5px 10px;border-radius:6px;white-space:nowrap;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,.3);pointer-events:none}
+
+/* user bar no sidebar */
+.sb-user{padding:10px 12px;border-top:1px solid rgba(255,255,255,.08);flex-shrink:0;margin-top:auto}
+.sb-user-inner{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:7px;cursor:pointer;transition:background .15s}
+.sb-user-inner:hover{background:rgba(255,255,255,.07)}
+.sb-avatar{width:28px;height:28px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
+.sb-uinfo{overflow:hidden;transition:opacity .2s}
+.sb-uname{font-size:12px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-urole{font-size:10px;color:rgba(255,255,255,.4)}
+#sidebar.collapsed .sb-uinfo{opacity:0;width:0}
+
+/* ══ MAIN ══ */
+#main{flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden;min-width:0}
+.topbar{background:var(--card);border-bottom:1px solid var(--border);padding:0 18px;height:52px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:10px}
+.tb-left{display:flex;align-items:center;gap:10px;min-width:0}
+.tb-title{font-size:15px;font-weight:700;white-space:nowrap}
+.tb-actions{display:flex;gap:7px;align-items:center;flex-shrink:0}
+.hamburger{display:none;background:none;border:none;font-size:22px;cursor:pointer;color:var(--text);padding:2px;flex-shrink:0;line-height:1}
+
+/* ══ BUTTONS ══ */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:7px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s;white-space:nowrap}
+.btn-p{background:var(--accent);color:#fff}.btn-p:hover{background:#1e40af}
+.btn-g{background:transparent;color:var(--muted);border:1px solid var(--border)}.btn-g:hover{background:var(--bg);color:var(--text)}
+.btn-s{background:var(--green);color:#fff}.btn-s:hover{background:#047857}
+.btn-t{background:var(--teal);color:#fff}.btn-t:hover{background:#0f766e}
+.btn-o{background:var(--orange);color:#fff}
+.btn-r{background:var(--red);color:#fff}.btn-r:hover{background:#b91c1c}
+.btn-sm{padding:5px 10px;font-size:12px}
+
+/* ══ CONTENT ══ */
+#content{flex:1;overflow-y:auto;padding:18px 22px}
+.page{display:none}.page.active{display:block}
+
+/* ══ STATS ══ */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:12px;margin-bottom:18px}
+.sc{background:var(--card);border-radius:var(--r);padding:16px;box-shadow:var(--shadow);border:1px solid var(--border)}
+.sc-lbl{font-size:11px;color:var(--muted);font-weight:500;margin-bottom:5px}
+.sc-val{font-size:22px;font-weight:800;letter-spacing:-.02em}
+.sc-sub{font-size:10px;color:var(--muted);margin-top:3px;font-family:var(--mono)}
+.sc-ico{float:right;font-size:20px;opacity:.13}
+
+/* ══ TABLES ══ */
+.tw{background:var(--card);border-radius:var(--r);border:1px solid var(--border);box-shadow:var(--shadow);overflow:hidden}
+.th{padding:12px 15px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.th-title{font-size:13px;font-weight:700}
+.ts{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.si{padding:7px 11px;border:1px solid var(--border);border-radius:7px;font-family:var(--font);font-size:13px;background:var(--bg);color:var(--text);width:200px;outline:none;transition:border-color .15s}
+.si:focus{border-color:var(--accent)}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:500px}
+th{text-align:left;padding:8px 12px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);background:#fafafa;white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid var(--border)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafafa}
+
+/* ══ MOBILE CARDS ══ */
+.mc-list{display:none;flex-direction:column;gap:9px;padding:10px}
+.mc{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:13px 14px;box-shadow:var(--shadow)}
+.mc-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:7px}
+.mc-title{font-weight:700;font-size:14px}
+.mc-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.mc-row{display:flex;justify-content:space-between;font-size:12px;padding:2px 0}
+.mc-row span:first-child{color:var(--muted)}
+.mc-row span:last-child{font-weight:600}
+.mc-act{display:flex;gap:7px;margin-top:9px;padding-top:9px;border-top:1px solid var(--border);flex-wrap:wrap}
+.mc-act .btn{flex:1;justify-content:center;font-size:12px;padding:7px 8px}
+
+/* ══ BADGES ══ */
+.badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
+.badge::before{content:'●';font-size:6px}
+.b-or{background:var(--ol);color:var(--orange)}.b-gr{background:var(--gl);color:var(--green)}
+.b-bl{background:var(--al);color:var(--accent)}.b-pu{background:var(--pl);color:var(--purple)}
+.b-gy{background:#f3f4f6;color:var(--muted)}.b-rd{background:var(--rl);color:var(--red)}
+
+/* ══ MODALS ══ */
+.mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);z-index:200;align-items:center;justify-content:center;padding:14px}
+.mo.open{display:flex}
+.modal{background:var(--card);border-radius:14px;width:100%;max-width:540px;max-height:92vh;overflow-y:auto;box-shadow:var(--shadowlg)}
+.mh{padding:15px 17px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--card);z-index:10}
+.mh h3{font-size:15px;font-weight:700}
+.mc-btn{background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);line-height:1}
+.mb{padding:15px 17px}
+.mf{padding:12px 17px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;position:sticky;bottom:0;background:var(--card)}
+
+/* ══ FORMS ══ */
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fi{display:flex;flex-direction:column;gap:4px}
+.fi.s2{grid-column:span 2}
+label{font-size:11px;font-weight:600;color:var(--text)}
+input,select,textarea{padding:9px 11px;border:1px solid var(--border);border-radius:7px;font-family:var(--font);font-size:13px;color:var(--text);background:#fff;outline:none;transition:border-color .15s;width:100%;-webkit-appearance:none}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(29,78,216,.09)}
+textarea{resize:vertical;min-height:72px}
+
+/* ══ FINANCE ══ */
+.fin-sum{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}
+.fcard{background:var(--card);border-radius:var(--r);padding:16px;border:1px solid var(--border);box-shadow:var(--shadow)}
+.fcard-lbl{font-size:11px;color:var(--muted);margin-bottom:5px;font-weight:500}
+.fcard-val{font-size:20px;font-weight:800;letter-spacing:-.02em}
+
+/* ══ OS DETAIL ══ */
+.odd{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.db{background:var(--bg);border-radius:8px;padding:12px}
+.db h4{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:7px}
+.dr{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;gap:6px}
+.dr span:first-child{color:var(--muted);flex-shrink:0}
+.dr span:last-child{font-weight:600;text-align:right}
+
+/* ══ ALERTA ══ */
+.alerta{background:var(--ol);border:1px solid #fde68a;border-radius:8px;padding:10px 14px;font-size:12px;color:#92400e;display:flex;align-items:center;gap:7px;margin-bottom:12px}
+
+/* ══ EDITOR ══ */
+.editor-wrap{background:var(--card);border-radius:var(--r);border:1px solid var(--border);box-shadow:var(--shadow);overflow:hidden;margin-bottom:18px}
+.editor-head{padding:10px 15px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;background:#fafafa}
+.editor-head span{font-size:13px;font-weight:700}
+.fmtbar{padding:7px 11px;border-bottom:1px solid var(--border);display:flex;gap:4px;flex-wrap:wrap;background:#f9fafb}
+.fb{background:none;border:1px solid var(--border);border-radius:5px;padding:3px 8px;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;font-family:var(--font);color:var(--text);line-height:1.4}
+.fb:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+.editor-body{min-height:300px;padding:18px 20px;outline:none;font-size:13.5px;line-height:1.85;color:var(--text);font-family:var(--font)}
+.editor-body:focus{box-shadow:inset 0 0 0 2px rgba(29,78,216,.12)}
+.editor-body h1,.editor-body h2,.editor-body h3{margin:14px 0 6px}
+.editor-body p{margin-bottom:6px}
+.editor-body ul,.editor-body ol{padding-left:20px;margin-bottom:6px}
+.editor-foot{font-size:10px;color:var(--muted);padding:6px 15px;border-top:1px solid var(--border);background:#fafafa;font-family:var(--mono)}
+.toolbar-row{display:flex;gap:7px;margin-bottom:14px;flex-wrap:wrap}
+
+/* ══ USER ADMIN PAGE ══ */
+.user-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;box-shadow:var(--shadow);display:flex;align-items:center;gap:14px;margin-bottom:10px}
+.u-avatar{width:38px;height:38px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0}
+.u-info{flex:1;min-width:0}
+.u-name{font-size:14px;font-weight:700}
+.u-email{font-size:11px;color:var(--muted);font-family:var(--mono)}
+.u-acts{display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap}
+
+/* ══ MISC ══ */
+.empty{text-align:center;padding:36px 20px;color:var(--muted)}
+.empty .ei{font-size:34px;margin-bottom:8px}
+.empty p{font-size:12px}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+
+/* ══ BOTTOM NAV ══ */
+#bnav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--border);z-index:100;padding:5px 0 calc(5px + env(safe-area-inset-bottom))}
+.bni{display:flex;justify-content:space-around}
+.bn{display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 5px;border-radius:9px;cursor:pointer;color:var(--muted);font-size:9px;font-weight:600;transition:color .15s;min-width:44px;position:relative}
+.bn .bico{font-size:19px;line-height:1}
+.bn.active{color:var(--accent)}
+.bn-badge{position:absolute;top:3px;right:4px;background:var(--red);color:#fff;font-size:8px;font-weight:700;padding:1px 4px;border-radius:8px;font-family:var(--mono)}
+
+/* ══ FAB ══ */
+#fab{display:none;position:fixed;bottom:76px;right:16px;width:50px;height:50px;background:var(--accent);color:#fff;border-radius:50%;border:none;font-size:25px;cursor:pointer;box-shadow:0 4px 16px rgba(29,78,216,.45);align-items:center;justify-content:center;z-index:110;transition:transform .15s}
+#fab:active{transform:scale(.91)}
+
+/* ══ MORE MENU ══ */
+#mmenu{display:none;position:fixed;bottom:125px;right:14px;background:var(--card);border-radius:12px;box-shadow:var(--shadowlg);border:1px solid var(--border);z-index:120;min-width:195px;overflow:hidden}
+#mmenu.open{display:block}
+.mmi{display:flex;align-items:center;gap:9px;padding:11px 15px;font-size:13px;font-weight:600;cursor:pointer;border-bottom:1px solid var(--border);transition:background .12s}
+.mmi:last-child{border-bottom:none}
+.mmi:hover{background:var(--bg)}
+.mmi .mico{font-size:17px}
+
+/* ══ OVERLAY ══ */
+#ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:149}
+#ov.open{display:block}
+
+/* ══ RESPONSIVE ══ */
+@media(max-width:768px){
+  #sidebar{position:fixed;left:0;top:0;bottom:0;transform:translateX(-100%);transition:transform .25s cubic-bezier(.4,0,.2,1);z-index:150;width:var(--sw) !important}
+  #sidebar.open{transform:translateX(0)}
+  .sb-toggle{display:none}
+  .hamburger{display:flex;align-items:center}
+  #bnav{display:block}
+  #fab{display:flex}
+  #content{padding:12px 12px 82px}
+  .topbar{padding:0 12px;height:50px}
+  .tb-actions{display:none}
+  .stats-grid{grid-template-columns:1fr 1fr;gap:9px}
+  .sc{padding:12px}.sc-val{font-size:18px}
+  .fin-sum{grid-template-columns:1fr;gap:9px}
+  .odd{grid-template-columns:1fr}
+  .fg{grid-template-columns:1fr}.fi.s2{grid-column:span 1}
+  .ts table{display:none}
+  .mc-list{display:flex}
+  .th{flex-direction:column;align-items:stretch;gap:7px}
+  .si{width:100%}
+  .mo{padding:0;align-items:flex-end}
+  .modal{border-radius:16px 16px 0 0;max-height:95vh}
+  .mf{flex-direction:column-reverse}
+  .mf .btn{width:100%;justify-content:center;padding:11px}
+  .toolbar-row .btn{flex:1;justify-content:center;font-size:11px;padding:7px 6px}
+  .editor-body{min-height:230px;padding:14px}
+  .u-acts{width:100%;margin-top:8px}
+  .user-card{flex-wrap:wrap}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════
+     TELA DE SETUP (primeira vez)
+══════════════════════════════════ -->
+<div id="setup-screen">
+  <div class="setup-box">
+    <h2>⚙️ Configuração Inicial</h2>
+    <p>Para ativar o sistema de login, você precisa conectar ao <b>Supabase</b>.<br>
+    Crie sua conta gratuita em <b>supabase.com</b> e cole as credenciais do seu projeto abaixo.</p>
+    <div class="setup-info">
+      ✅ <b>Como obter as credenciais:</b><br>
+      1. Acesse <b>supabase.com</b> → Crie um projeto<br>
+      2. Vá em <b>Project Settings → API</b><br>
+      3. Copie a <b>Project URL</b> e a <b>anon/public key</b>
+    </div>
+    <div class="setup-field">
+      <label>Supabase Project URL</label>
+      <input id="setup-url" placeholder="https://xyzxyz.supabase.co" type="url">
+    </div>
+    <div class="setup-field">
+      <label>Supabase Anon Key (public)</label>
+      <input id="setup-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+    </div>
+    <div class="setup-btns">
+      <button class="setup-bk" onclick="showLogin()">← Voltar</button>
+      <button class="setup-ok" onclick="saveSetup()">✓ Salvar e Conectar</button>
+    </div>
+    <div class="setup-warn" style="margin-top:14px;margin-bottom:0">
+      ⚠️ <b>Execute este SQL no Supabase (SQL Editor):</b><br><br>
+      <code style="font-size:11px;font-family:monospace;display:block;white-space:pre-wrap">CREATE TABLE usuarios (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  nome text NOT NULL,
+  email text UNIQUE NOT NULL,
+  senha_hash text NOT NULL,
+  role text DEFAULT 'user',
+  ativo boolean DEFAULT true,
+  criado_em timestamptz DEFAULT now(),
+  ultimo_acesso timestamptz
+);
+
+-- Desative RLS para uso com anon key
+ALTER TABLE usuarios DISABLE ROW LEVEL SECURITY;</code>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════
+     TELA DE LOGIN
+══════════════════════════════════ -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="login-logo-ico">🔧</div>
+      <div class="login-logo-txt">TechOS<small>Assistência Técnica</small></div>
+    </div>
+    <div class="login-title">Bem-vindo de volta 👋</div>
+    <div class="login-sub">Faça login para acessar o sistema</div>
+    <div class="login-err" id="login-err"></div>
+    <div class="login-field">
+      <label>E-mail</label>
+      <input id="login-email" type="email" placeholder="seu@email.com" autocomplete="email">
+    </div>
+    <div class="login-field">
+      <label>Senha</label>
+      <input id="login-senha" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="login-btn" id="login-btn" onclick="doLogin()">Entrar →</button>
+    <div class="login-footer">
+      Sistema licenciado · TechOS v1.0
+      <a class="setup-link" onclick="showSetup()">⚙️ Configurar conexão Supabase</a>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════
+     APP PRINCIPAL
+══════════════════════════════════ -->
+<div id="app">
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div class="sb-logo">
+    <div class="sb-icon">🔧</div>
+    <div class="sb-text">TechOS<small>Assistência Técnica</small></div>
+    <button class="sb-toggle" onclick="toggleSB()">‹</button>
+  </div>
+  <div class="nav-sec">
+    <div class="nav-lbl">Principal</div>
+    <div class="ni active" data-tip="Dashboard" onclick="go('dashboard')"><span class="ico">📊</span><span class="ni-txt">Dashboard</span></div>
+    <div class="ni" data-tip="OS" onclick="go('os')"><span class="ico">📋</span><span class="ni-txt">Ordens de Serviço</span><span class="nbadge" id="sb-os-b" style="display:none">0</span></div>
+    <div class="ni" data-tip="Clientes" onclick="go('clientes')"><span class="ico">👥</span><span class="ni-txt">Clientes</span></div>
+  </div>
+  <div class="nav-sec">
+    <div class="nav-lbl">Operação</div>
+    <div class="ni" data-tip="Estoque" onclick="go('estoque')"><span class="ico">📦</span><span class="ni-txt">Estoque</span><span class="nbadge" id="sb-est-b" style="display:none">!</span></div>
+    <div class="ni" data-tip="Fornecedores" onclick="go('fornecedores')"><span class="ico">🏭</span><span class="ni-txt">Fornecedores</span></div>
+    <div class="ni" data-tip="Financeiro" onclick="go('financeiro')"><span class="ico">💰</span><span class="ni-txt">Financeiro</span></div>
+  </div>
+  <div class="nav-sec">
+    <div class="nav-lbl">Documentos</div>
+    <div class="ni" data-tip="Termo de Uso" onclick="go('termo')"><span class="ico">📄</span><span class="ni-txt">Termo de Uso</span></div>
+    <div class="ni" data-tip="Garantia" onclick="go('garantia')"><span class="ico">🛡️</span><span class="ni-txt">Termo de Garantia</span></div>
+  </div>
+  <div class="nav-sec" id="nav-admin" style="display:none">
+    <div class="nav-lbl">Administração</div>
+    <div class="ni" data-tip="Usuários" onclick="go('usuarios')"><span class="ico">🔐</span><span class="ni-txt">Gerenciar Usuários</span></div>
+  </div>
+  <div class="nav-sec" style="padding-bottom:0">
+    <div class="nav-lbl">Sistema</div>
+    <div class="ni" data-tip="Backup" onclick="exportDB()"><span class="ico">💾</span><span class="ni-txt">Exportar Backup</span></div>
+    <div class="ni" data-tip="Importar" onclick="importDB()"><span class="ico">📂</span><span class="ni-txt">Importar Backup</span></div>
+  </div>
+  <div class="sb-user">
+    <div class="sb-user-inner" onclick="doLogout()">
+      <div class="sb-avatar" id="sb-av">?</div>
+      <div class="sb-uinfo">
+        <div class="sb-uname" id="sb-uname">—</div>
+        <div class="sb-urole" id="sb-urole">Clique para sair</div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div id="main">
+  <div class="topbar">
+    <div class="tb-left">
+      <button class="hamburger" onclick="toggleDrawer()">☰</button>
+      <div class="tb-title" id="pg-title">Dashboard</div>
+    </div>
+    <div class="tb-actions" id="pg-actions"></div>
+  </div>
+  <div id="content">
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="stats-grid" id="dash-stats"></div>
+      <div id="dash-alerts"></div>
+      <div class="tw">
+        <div class="th"><span class="th-title">⚡ OS Recentes</span></div>
+        <div class="ts"><table><thead><tr><th>Nº</th><th>Cliente</th><th>Aparelho</th><th>Status</th><th>Total</th><th>Data</th></tr></thead><tbody id="dash-tbl"></tbody></table></div>
+        <div class="mc-list" id="dash-cards"></div>
+      </div>
+    </div>
+
+    <!-- OS -->
+    <div class="page" id="page-os">
+      <div class="tw">
+        <div class="th">
+          <span class="th-title">Ordens de Serviço</span>
+          <div style="display:flex;gap:7px;flex-wrap:wrap">
+            <input class="si" id="os-search" placeholder="🔍 Buscar..." oninput="renderOS()">
+            <select class="si" style="width:150px" id="os-sf" onchange="renderOS()">
+              <option value="">Todos os status</option>
+              <option>Orçamento Pendente</option><option>Orçamento Aprovado</option>
+              <option>Aguardando Peça</option><option>Em Manutenção</option>
+              <option>Pronto para Retirada</option><option>Entregue</option><option>Cancelado</option>
+            </select>
+          </div>
+        </div>
+        <div class="ts"><table><thead><tr><th>Nº</th><th>Cliente</th><th>Aparelho</th><th>Defeito</th><th>Status</th><th>Total</th><th>Data</th><th>Ações</th></tr></thead><tbody id="os-tbl"></tbody></table></div>
+        <div class="mc-list" id="os-cards"></div>
+      </div>
+    </div>
+
+    <!-- CLIENTES -->
+    <div class="page" id="page-clientes">
+      <div class="tw">
+        <div class="th">
+          <span class="th-title">Clientes</span>
+          <input class="si" placeholder="🔍 Nome, CPF..." oninput="renderClientes(this.value)">
+        </div>
+        <div class="ts"><table><thead><tr><th>Nome</th><th>CPF/CNPJ</th><th>Telefone</th><th>E-mail</th><th>OS</th><th>Gasto</th><th>Ações</th></tr></thead><tbody id="cli-tbl"></tbody></table></div>
+        <div class="mc-list" id="cli-cards"></div>
+      </div>
+    </div>
+
+    <!-- ESTOQUE -->
+    <div class="page" id="page-estoque">
+      <div id="est-alerta"></div>
+      <div class="tw">
+        <div class="th">
+          <span class="th-title">Peças em Estoque</span>
+          <input class="si" placeholder="🔍 Nome, categoria..." oninput="renderEstoque(this.value)">
+        </div>
+        <div class="ts"><table><thead><tr><th>Peça</th><th>Categoria</th><th>Compat.</th><th>Custo</th><th>Venda</th><th>Qtd</th><th>Mín.</th><th>Ações</th></tr></thead><tbody id="est-tbl"></tbody></table></div>
+        <div class="mc-list" id="est-cards"></div>
+      </div>
+    </div>
+
+    <!-- FORNECEDORES -->
+    <div class="page" id="page-fornecedores">
+      <div class="tw">
+        <div class="th">
+          <span class="th-title">Fornecedores</span>
+          <input class="si" placeholder="🔍 Empresa..." oninput="renderForn(this.value)">
+        </div>
+        <div class="ts"><table><thead><tr><th>Empresa</th><th>Vendedor</th><th>WhatsApp</th><th>E-mail</th><th>Categorias</th><th>Ações</th></tr></thead><tbody id="forn-tbl"></tbody></table></div>
+        <div class="mc-list" id="forn-cards"></div>
+      </div>
+    </div>
+
+    <!-- FINANCEIRO -->
+    <div class="page" id="page-financeiro">
+      <div class="fin-sum" id="fin-sum"></div>
+      <div class="tw">
+        <div class="th">
+          <span class="th-title">Lançamentos</span>
+          <div style="display:flex;gap:7px;flex-wrap:wrap">
+            <input type="month" class="si" style="width:148px" id="fin-mes" onchange="renderFin()">
+            <select class="si" style="width:125px" id="fin-tp" onchange="renderFin()">
+              <option value="">Todos</option><option value="receita">Receitas</option><option value="despesa">Despesas</option>
+            </select>
+          </div>
+        </div>
+        <div class="ts"><table><thead><tr><th>Data</th><th>Tipo</th><th>Categoria</th><th>Descrição</th><th>Valor</th><th>Ações</th></tr></thead><tbody id="fin-tbl"></tbody></table></div>
+        <div class="mc-list" id="fin-cards"></div>
+      </div>
+    </div>
+
+    <!-- TERMO DE USO -->
+    <div class="page" id="page-termo">
+      <div class="toolbar-row">
+        <button class="btn btn-p" onclick="salvarDoc('termo')">💾 Salvar</button>
+        <button class="btn btn-t" onclick="exportPDF('termo')">📄 Exportar PDF</button>
+        <button class="btn btn-g" onclick="resetDoc('termo')">↩ Padrão</button>
+      </div>
+      <div class="editor-wrap">
+        <div class="editor-head"><span>📄 Termo de Uso</span><span style="font-size:10px;color:var(--muted);font-family:var(--mono)" id="termo-st">Salvo</span></div>
+        <div class="fmtbar">
+          <button class="fb" onclick="ef('bold')"><b>N</b></button><button class="fb" onclick="ef('italic')"><i>I</i></button>
+          <button class="fb" onclick="ef('underline')"><u>S</u></button><button class="fb" onclick="efb('H2')">H2</button>
+          <button class="fb" onclick="efb('P')">¶</button><button class="fb" onclick="ef('insertUnorderedList')">•</button>
+          <button class="fb" onclick="ef('insertOrderedList')">#</button><button class="fb" onclick="ef('justifyCenter')">↔</button>
+          <button class="fb" onclick="ef('removeFormat')">✕</button>
+        </div>
+        <div id="editor-termo" class="editor-body" contenteditable="true" oninput="markDirty('termo')"></div>
+        <div class="editor-foot" id="termo-ft">—</div>
+      </div>
+    </div>
+
+    <!-- TERMO DE GARANTIA -->
+    <div class="page" id="page-garantia">
+      <div class="toolbar-row">
+        <button class="btn btn-p" onclick="salvarDoc('garantia')">💾 Salvar</button>
+        <button class="btn btn-t" onclick="exportPDF('garantia')">📄 Exportar PDF</button>
+        <button class="btn btn-o" onclick="exportGarOSMenu()">🖨️ Exportar com OS</button>
+        <button class="btn btn-g" onclick="resetDoc('garantia')">↩ Padrão</button>
+      </div>
+      <div class="editor-wrap">
+        <div class="editor-head"><span>🛡️ Termo de Garantia</span><span style="font-size:10px;color:var(--muted);font-family:var(--mono)" id="garantia-st">Salvo</span></div>
+        <div class="fmtbar">
+          <button class="fb" onclick="efg('bold')"><b>N</b></button><button class="fb" onclick="efg('italic')"><i>I</i></button>
+          <button class="fb" onclick="efg('underline')"><u>S</u></button><button class="fb" onclick="efbg('H2')">H2</button>
+          <button class="fb" onclick="efbg('P')">¶</button><button class="fb" onclick="efg('insertUnorderedList')">•</button>
+          <button class="fb" onclick="efg('insertOrderedList')">#</button><button class="fb" onclick="efg('justifyCenter')">↔</button>
+          <button class="fb" onclick="efg('removeFormat')">✕</button>
+        </div>
+        <div id="editor-garantia" class="editor-body" contenteditable="true" oninput="markDirty('garantia')"></div>
+        <div class="editor-foot" id="garantia-ft">—</div>
+      </div>
+      <div style="background:var(--al);border-radius:8px;padding:12px 14px;font-size:12px;color:#1e3a8a;border:1px solid #bfdbfe">
+        💡 Use <code style="background:rgba(0,0,0,.07);padding:1px 5px;border-radius:4px">{cliente}</code> <code style="background:rgba(0,0,0,.07);padding:1px 5px;border-radius:4px">{aparelho}</code> <code style="background:rgba(0,0,0,.07);padding:1px 5px;border-radius:4px">{os}</code> <code style="background:rgba(0,0,0,.07);padding:1px 5px;border-radius:4px">{data}</code> <code style="background:rgba(0,0,0,.07);padding:1px 5px;border-radius:4px">{garantia_dias}</code> para preenchimento automático.
+      </div>
+    </div>
+
+    <!-- USUÁRIOS (admin) -->
+    <div class="page" id="page-usuarios">
+      <div id="user-list-wrap"></div>
+    </div>
+
+  </div>
+</div>
+</div><!-- end app -->
+
+<!-- ══ BOTTOM NAV ══ -->
+<nav id="bnav">
+  <div class="bni">
+    <div class="bn active" onclick="go('dashboard')"><span class="bico">📊</span>Início</div>
+    <div class="bn" onclick="go('os')"><span class="bico">📋</span>OS<span class="bn-badge" id="bn-os-b" style="display:none">0</span></div>
+    <div class="bn" onclick="go('clientes')"><span class="bico">👥</span>Clientes</div>
+    <div class="bn" onclick="go('financeiro')"><span class="bico">💰</span>Finanças</div>
+    <div class="bn" id="bn-more" onclick="toggleMM()"><span class="bico">⋯</span>Mais</div>
+  </div>
+</nav>
+<div id="mmenu">
+  <div class="mmi" onclick="go('estoque');closeMM()"><span class="mico">📦</span>Estoque</div>
+  <div class="mmi" onclick="go('fornecedores');closeMM()"><span class="mico">🏭</span>Fornecedores</div>
+  <div class="mmi" onclick="go('termo');closeMM()"><span class="mico">📄</span>Termo de Uso</div>
+  <div class="mmi" onclick="go('garantia');closeMM()"><span class="mico">🛡️</span>Garantia</div>
+  <div class="mmi" id="mm-users" style="display:none" onclick="go('usuarios');closeMM()"><span class="mico">🔐</span>Usuários</div>
+  <div class="mmi" onclick="exportDB();closeMM()"><span class="mico">💾</span>Exportar Backup</div>
+</div>
+<button id="fab" onclick="fabAct()">＋</button>
+<div id="ov" onclick="closeDrawer()"></div>
+
+<!-- ══ MODAIS ══ -->
+<!-- Modal OS -->
+<div class="mo" id="m-os">
+  <div class="modal" style="max-width:660px">
+    <div class="mh"><h3 id="m-os-tit">Nova OS</h3><button class="mc-btn" onclick="closeM('m-os')">×</button></div>
+    <div class="mb">
+      <div class="fg">
+        <div class="fi s2"><label>Cliente *</label><select id="os-cli"></select></div>
+        <div class="fi"><label>Marca *</label><input id="os-marca"></div>
+        <div class="fi"><label>Modelo *</label><input id="os-modelo"></div>
+        <div class="fi"><label>IMEI / Série</label><input id="os-imei"></div>
+        <div class="fi"><label>Senha</label><input id="os-senha" type="password"></div>
+        <div class="fi s2"><label>Defeito *</label><textarea id="os-defeito"></textarea></div>
+        <div class="fi s2"><label>Laudo Técnico</label><textarea id="os-laudo"></textarea></div>
+        <div class="fi"><label>Mão de Obra (R$)</label><input id="os-mo" type="number" step="0.01" placeholder="0,00" oninput="calcOS()"></div>
+        <div class="fi"><label>Desconto (R$)</label><input id="os-desc" type="number" step="0.01" placeholder="0,00" oninput="calcOS()"></div>
+        <div class="fi"><label>Garantia (dias)</label><input id="os-gar" type="number" placeholder="90"></div>
+        <div class="fi"><label>Status</label>
+          <select id="os-stat"><option>Orçamento Pendente</option><option>Orçamento Aprovado</option><option>Aguardando Peça</option><option>Em Manutenção</option><option>Pronto para Retirada</option><option>Entregue</option><option>Cancelado</option></select>
+        </div>
+        <div class="fi s2">
+          <label>Peças Utilizadas</label>
+          <div id="os-pecas-wrap" style="display:flex;flex-direction:column;gap:7px;margin-bottom:7px"></div>
+          <button type="button" class="btn btn-g btn-sm" onclick="openAddPeca()">+ Peça do Estoque</button>
+        </div>
+        <div class="fi s2" style="background:var(--al);border-radius:8px;padding:12px">
+          <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:800">
+            <span>Total:</span><span id="os-total-v" style="color:var(--accent)">R$ 0,00</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mf"><button class="btn btn-g" onclick="closeM('m-os')">Cancelar</button><button class="btn btn-p" onclick="saveOS()">💾 Salvar</button></div>
+  </div>
+</div>
+
+<!-- Modal Cliente -->
+<div class="mo" id="m-cli">
+  <div class="modal">
+    <div class="mh"><h3 id="m-cli-tit">Novo Cliente</h3><button class="mc-btn" onclick="closeM('m-cli')">×</button></div>
+    <div class="mb">
+      <div class="fg">
+        <div class="fi s2"><label>Nome *</label><input id="cli-nome"></div>
+        <div class="fi"><label>CPF / CNPJ</label><input id="cli-cpf"></div>
+        <div class="fi"><label>Telefone *</label><input id="cli-tel"></div>
+        <div class="fi s2"><label>E-mail</label><input id="cli-email" type="email"></div>
+        <div class="fi s2"><label>Endereço</label><input id="cli-end"></div>
+        <div class="fi s2"><label>Obs.</label><textarea id="cli-obs"></textarea></div>
+      </div>
+    </div>
+    <div class="mf"><button class="btn btn-g" onclick="closeM('m-cli')">Cancelar</button><button class="btn btn-p" onclick="saveCli()">💾 Salvar</button></div>
+  </div>
+</div>
+
+<!-- Modal Estoque -->
+<div class="mo" id="m-est">
+  <div class="modal">
+    <div class="mh"><h3 id="m-est-tit">Nova Peça</h3><button class="mc-btn" onclick="closeM('m-est')">×</button></div>
+    <div class="mb">
+      <div class="fg">
+        <div class="fi s2"><label>Nome *</label><input id="est-nome"></div>
+        <div class="fi"><label>Categoria</label><select id="est-cat"><option>Tela</option><option>Bateria</option><option>Conector</option><option>Câmera</option><option>Placa</option><option>Carcaça</option><option>Botão</option><option>Alto-falante</option><option>Microfone</option><option>Outro</option></select></div>
+        <div class="fi"><label>Compat.</label><input id="est-compat"></div>
+        <div class="fi"><label>Custo (R$)</label><input id="est-custo" type="number" step="0.01"></div>
+        <div class="fi"><label>Venda (R$)</label><input id="est-venda" type="number" step="0.01"></div>
+        <div class="fi"><label>Qtd.</label><input id="est-qtd" type="number"></div>
+        <div class="fi"><label>Qtd. Mínima</label><input id="est-min" type="number"></div>
+      </div>
+    </div>
+    <div class="mf"><button class="btn btn-g" onclick="closeM('m-est')">Cancelar</button><button class="btn btn-p" onclick="saveEst()">💾 Salvar</button></div>
+  </div>
+</div>
+
+<!-- Modal Fornecedor -->
+<div class="mo" id="m-forn">
+  <div class="modal">
+    <div class="mh"><h3>Novo Fornecedor</h3><button class="mc-btn" onclick="closeM('m-forn')">×</button></div>
+    <div class="mb">
+      <div class="fg">
+        <div class="fi s2"><label>Empresa *</label><input id="forn-emp"></div>
+        <div class="fi"><label>Vendedor</label><input id="forn-vend"></div>
+        <div class="fi"><label>WhatsApp</label><input id="forn-whats"></div>
+        <div class="fi s2"><label>E-mail</label><input id="forn-email" type="email"></div>
+        <div class="fi s2"><label>Categorias</label><input id="forn-cats"></div>
+        <div class="fi s2"><label>Obs.</label><textarea id="forn-obs"></textarea></div>
+      </div>
+    </div>
+    <div class="mf"><button class="btn btn-g" onclick="closeM('m-forn')">Cancelar</button><button class="btn btn-p" onclick="saveForn()">💾 Salvar</button></div>
+  </div>
+</div>
+
+<!-- Modal Financeiro -->
+<div class="mo" id="m-fin">
+  <div class="modal">
+    <div class="mh"><h3>Novo Lançamento</h3><button class="mc-btn" onclick="closeM('m-fin')">×</button></div>
+    <div class="mb">
+      <div class="fg">
+        <div class="fi"><label>Tipo *</label><select id="fin-tipo"><option value="receita">Receita</option><option value="despesa">Despesa</option></select></div>
+        <div class="fi"><label>Data *</label><input id="fin-data" type="date"></div>
+        <div class="fi"><label>Categoria</label><input id="fin-cat"></div>
+        <div class="fi"><label>Valor (R$) *</label><input id="fin-val" type="number" step="0.01"></div>
+        <div class="fi s2"><label>Descrição</label><textarea id="fin-desc"></textarea></div>
+      </div>
+    </div>
+    <div class="mf"><button class="btn btn-g" onclick="closeM('m-fin')">Cancelar</button><button class="btn btn-p" onclick="saveFin()">💾 Salvar</button></div>
+  </div>
+</div>
+
+<!-- Modal OS Detail -->
+<div class="mo" id="m-det">
+  <div class="modal" style="max-width:620px">
+    <div class="mh"><h3 id="det-tit">OS</h3><button class="mc-btn" onclick="closeM('m-det')">×</button></div>
+    <div class="mb" id="det-body"></div>
+    <div class="mf">
+      <button class="btn btn-g" onclick="closeM('m-det')">Fechar</button>
+      <button class="btn btn-s" onclick="waOK()">📱 WhatsApp</button>
+      <button class="btn btn-t" onclick="exportGarOSfromDet()">🛡️ Garantia PDF</button>
+      <button class="btn btn-p" onclick="printOS()">🖨️ Imprimir</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Add Peça -->
+<div class="mo" id="m-peca">
+  <div class="modal">
+    <div class="mh"><h3>Adicionar Peça</h3><button class="mc-btn" onclick="closeM('m-peca')">×</button></div>
+    <div class="mb">
+      <div class="fg">
+        <div class="fi s2"><label>Peça *</label><select id="ap-peca"></select></div>
+        <div class="fi"><label>Qtd.</label><input id="ap-qtd" type="number" value="1" min="1"></div>
+        <div class="fi"><label>Preço Unit. (R$)</label><input id="ap-preco" type="number" step="0.01"></div>
+      </div>
+    </div>
+    <div class="mf"><button class="btn btn-g" onclick="closeM('m-peca')">Cancelar</button><button class="btn btn-p" onclick="addPeca()">✓ Adicionar</button></div>
+  </div>
+</div>
+
+<!-- Modal Garantia OS -->
+<div class="mo" id="m-gar-os">
+  <div class="modal">
+    <div class="mh"><h3>🛡️ Garantia com Dados de OS</h3><button class="mc-btn" onclick="closeM('m-gar-os')">×</button></div>
+    <div class="mb">
+      <div class="fg">
+        <div class="fi s2"><label>Selecionar OS</label><select id="gar-os-sel"></select></div>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin-top:10px">Os campos <b>{cliente}</b>, <b>{aparelho}</b>, <b>{data}</b>, <b>{os}</b> e <b>{garantia_dias}</b> serão preenchidos automaticamente.</p>
+    </div>
+    <div class="mf"><button class="btn btn-g" onclick="closeM('m-gar-os')">Cancelar</button><button class="btn btn-t" onclick="doExportGarOS()">📄 Gerar PDF</button></div>
+  </div>
+</div>
+
+<!-- Modal Novo Usuário (admin) -->
+<div class="mo" id="m-user">
+  <div class="modal">
+    <div class="mh"><h3 id="m-user-tit">Novo Usuário</h3><button class="mc-btn" onclick="closeM('m-user')">×</button></div>
+    <div class="mb">
+      <div class="setup-info" style="margin-bottom:14px;font-size:12px">
+        ⚠️ A senha gerada aqui será a senha de acesso do usuário ao sistema. Guarde-a e envie ao cliente.
+      </div>
+      <div class="fg">
+        <div class="fi s2"><label>Nome Completo *</label><input id="u-nome" placeholder="Nome do cliente/técnico"></div>
+        <div class="fi s2"><label>E-mail de Login *</label><input id="u-email" type="email" placeholder="email@exemplo.com"></div>
+        <div class="fi"><label>Senha de Acesso *</label><input id="u-senha" type="text" placeholder="Mínimo 6 caracteres"></div>
+        <div class="fi"><label>Perfil</label>
+          <select id="u-role">
+            <option value="user">Usuário (operador)</option>
+            <option value="admin">Administrador</option>
+          </select>
+        </div>
+        <div class="fi s2" style="flex-direction:row;align-items:center;gap:8px">
+          <label style="margin:0">Conta Ativa</label>
+          <input id="u-ativo" type="checkbox" checked style="width:auto;padding:0">
+        </div>
+      </div>
+      <div style="margin-top:10px">
+        <button type="button" class="btn btn-g btn-sm" onclick="gerarSenha()">🎲 Gerar Senha Aleatória</button>
+      </div>
+    </div>
+    <div class="mf"><button class="btn btn-g" onclick="closeM('m-user')">Cancelar</button><button class="btn btn-p" onclick="saveUser()">💾 Salvar Usuário</button></div>
+  </div>
+</div>
+
+<input type="file" id="imp-file" accept=".json" style="display:none" onchange="processImport(event)">
+
+<script>
+// ══════════════════════════════════════
+//  SUPABASE CONFIG
+// ══════════════════════════════════════
+let supa = null;
+
+function loadConfig(){
+  const url = localStorage.getItem('supa_url');
+  const key = localStorage.getItem('supa_key');
+  if(url && key){
+    try{
+      supa = supabase.createClient(url, key);
+      return true;
+    }catch(e){ return false; }
+  }
+  return false;
+}
+
+function saveSetup(){
+  const url = document.getElementById('setup-url').value.trim();
+  const key = document.getElementById('setup-key').value.trim();
+  if(!url || !key){ alert('Preencha URL e Key do Supabase.'); return; }
+  localStorage.setItem('supa_url', url);
+  localStorage.setItem('supa_key', key);
+  supa = supabase.createClient(url, key);
+  alert('Configuração salva! Agora crie o primeiro usuário administrador diretamente no Supabase (SQL Editor) conforme as instruções.');
+  showLogin();
+}
+
+function showSetup(){
+  document.body.className = 'setup';
+  document.getElementById('setup-url').value = localStorage.getItem('supa_url')||'';
+  document.getElementById('setup-key').value = localStorage.getItem('supa_key')||'';
+}
+function showLogin(){ document.body.className = ''; }
+
+// ══════════════════════════════════════
+//  AUTH — LOGIN / LOGOUT
+// ══════════════════════════════════════
+let currentUser = null;
+
+async function doLogin(){
+  if(!supa){ alert('Configure o Supabase primeiro clicando em "Configurar conexão Supabase".'); return; }
+  const email = document.getElementById('login-email').value.trim().toLowerCase();
+  const senha = document.getElementById('login-senha').value;
+  if(!email || !senha){ showErr('Preencha e-mail e senha.'); return; }
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true; btn.textContent = 'Aguarde...';
+  try{
+    // Busca usuário pelo email
+    const { data: users, error } = await supa.from('usuarios').select('*').eq('email', email).eq('ativo', true).limit(1);
+    if(error || !users || users.length === 0){ showErr('E-mail não encontrado ou conta inativa.'); btn.disabled=false;btn.textContent='Entrar →';return; }
+    const user = users[0];
+    // Verifica senha (hash simples com btoa — para produção use bcrypt no backend)
+    const hash = btoa(unescape(encodeURIComponent(senha)));
+    if(user.senha_hash !== hash){ showErr('Senha incorreta.'); btn.disabled=false;btn.textContent='Entrar →';return; }
+    // Atualiza ultimo acesso
+    await supa.from('usuarios').update({ultimo_acesso: new Date().toISOString()}).eq('id', user.id);
+    currentUser = user;
+    sessionStorage.setItem('techos_user', JSON.stringify(user));
+    enterApp();
+  }catch(e){
+    showErr('Erro de conexão. Verifique as credenciais do Supabase.');
+  }
+  btn.disabled=false; btn.textContent='Entrar →';
+}
+
+function showErr(msg){ const e=document.getElementById('login-err'); e.textContent=msg; e.classList.add('show'); }
+
+function enterApp(){
+  document.body.className = 'logged';
+  // Configura UI com dados do usuário
+  const av = currentUser.nome.charAt(0).toUpperCase();
+  document.getElementById('sb-av').textContent = av;
+  document.getElementById('sb-uname').textContent = currentUser.nome;
+  document.getElementById('sb-urole').textContent = currentUser.role === 'admin' ? '👑 Administrador' : '👤 Operador';
+  // Mostra menu de usuários só para admin
+  if(currentUser.role === 'admin'){
+    document.getElementById('nav-admin').style.display = '';
+    document.getElementById('mm-users').style.display = '';
+  }
+  initDB().then(()=>{
+    document.getElementById('fin-mes').value = new Date().toISOString().slice(0,7);
+    renderDash();
+  });
+}
+
+function doLogout(){
+  if(!confirm('Deseja sair do sistema?')) return;
+  currentUser = null;
+  sessionStorage.removeItem('techos_user');
+  document.body.className = '';
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-senha').value = '';
+  document.getElementById('login-err').classList.remove('show');
+}
+
+// ══════════════════════════════════════
+//  GERENCIAR USUÁRIOS (admin)
+// ══════════════════════════════════════
+let userEditId = null;
+
+async function renderUsuarios(){
+  if(!supa){ document.getElementById('user-list-wrap').innerHTML='<div class="alerta">Supabase não configurado.</div>'; return; }
+  const { data: users } = await supa.from('usuarios').select('*').order('criado_em', {ascending:false});
+  const wrap = document.getElementById('user-list-wrap');
+  const addBtn = `<div style="display:flex;justify-content:flex-end;margin-bottom:14px"><button class="btn btn-p" onclick="openUser()">+ Novo Usuário</button></div>`;
+  if(!users || users.length === 0){ wrap.innerHTML = addBtn + '<div class="empty"><div class="ei">🔐</div><p>Nenhum usuário cadastrado</p></div>'; return; }
+  wrap.innerHTML = addBtn + users.map(u => {
+    const ini = u.nome.charAt(0).toUpperCase();
+    const ativo = u.ativo ? '<span class="badge b-gr">Ativo</span>' : '<span class="badge b-rd">Inativo</span>';
+    const role = u.role === 'admin' ? '<span class="badge b-pu">Admin</span>' : '<span class="badge b-bl">Operador</span>';
+    const isSelf = currentUser && u.id === currentUser.id;
+    return `<div class="user-card">
+      <div class="u-avatar" style="background:${u.role==='admin'?'#7c3aed':'var(--accent)'}">${ini}</div>
+      <div class="u-info">
+        <div class="u-name">${u.nome} ${isSelf?'<span style="font-size:10px;color:var(--muted)">(você)</span>':''}</div>
+        <div class="u-email">${u.email}</div>
+        <div style="display:flex;gap:5px;margin-top:5px">${role} ${ativo}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:3px;font-family:var(--mono)">Criado: ${D(u.criado_em)} · Último acesso: ${D(u.ultimo_acesso)}</div>
+      </div>
+      <div class="u-acts">
+        <button class="btn btn-g btn-sm" onclick="openUser('${u.id}')">✏️ Editar</button>
+        <button class="btn btn-g btn-sm" onclick="toggleUserAtivo('${u.id}',${u.ativo})" title="${u.ativo?'Desativar':'Ativar'}">${u.ativo?'🚫 Desativar':'✅ Ativar'}</button>
+        ${!isSelf?`<button class="btn btn-g btn-sm" style="color:var(--red)" onclick="delUser('${u.id}')">🗑</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openUser(id=null){
+  userEditId = id;
+  document.getElementById('m-user-tit').textContent = id ? 'Editar Usuário' : 'Novo Usuário';
+  ['u-nome','u-email','u-senha'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('u-role').value = 'user';
+  document.getElementById('u-ativo').checked = true;
+  if(id){
+    supa.from('usuarios').select('*').eq('id',id).limit(1).then(({data})=>{
+      if(data&&data[0]){
+        const u=data[0];
+        document.getElementById('u-nome').value=u.nome||'';
+        document.getElementById('u-email').value=u.email||'';
+        document.getElementById('u-role').value=u.role||'user';
+        document.getElementById('u-ativo').checked=u.ativo!==false;
+        document.getElementById('u-senha').placeholder='Deixe em branco para não alterar';
+      }
+    });
+  }
+  openM('m-user');
+}
+
+function gerarSenha(){
+  const chars='ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#!';
+  let p='';for(let i=0;i<10;i++)p+=chars[Math.floor(Math.random()*chars.length)];
+  document.getElementById('u-senha').value=p;
+  document.getElementById('u-senha').type='text';
+}
+
+async function saveUser(){
+  if(!supa)return;
+  const nome=document.getElementById('u-nome').value.trim();
+  const email=document.getElementById('u-email').value.trim().toLowerCase();
+  const senha=document.getElementById('u-senha').value;
+  const role=document.getElementById('u-role').value;
+  const ativo=document.getElementById('u-ativo').checked;
+  if(!nome||!email){alert('Nome e e-mail são obrigatórios.');return}
+  if(!userEditId && !senha){alert('Defina uma senha para o novo usuário.');return}
+  const data = {nome,email,role,ativo};
+  if(senha) data.senha_hash = btoa(unescape(encodeURIComponent(senha)));
+  let err;
+  if(userEditId){
+    ({error:err} = await supa.from('usuarios').update(data).eq('id',userEditId));
+  }else{
+    ({error:err} = await supa.from('usuarios').insert({...data,criado_em:new Date().toISOString()}));
+  }
+  if(err){alert('Erro ao salvar: '+err.message);return}
+  closeM('m-user');
+  if(senha && userEditId){
+    alert(`✅ Usuário atualizado!\n\nE-mail: ${email}\nNova Senha: ${senha}\n\nEnvie ao usuário.`);
+  } else if(!userEditId){
+    alert(`✅ Usuário criado com sucesso!\n\nE-mail: ${email}\nSenha: ${senha}\n\nAnote e envie ao usuário. Após fechar, não será possível ver a senha novamente.`);
+  }
+  renderUsuarios();
+}
+
+async function toggleUserAtivo(id, atual){
+  if(!confirm(`${atual?'Desativar':'Ativar'} este usuário?`))return;
+  await supa.from('usuarios').update({ativo:!atual}).eq('id',id);
+  renderUsuarios();
+}
+
+async function delUser(id){
+  if(!confirm('Excluir permanentemente este usuário?'))return;
+  await supa.from('usuarios').delete().eq('id',id);
+  renderUsuarios();
+}
+
+// ══════════════════════════════════════
+//  DATABASE LOCAL (IndexedDB)
+// ══════════════════════════════════════
+let db;
+async function initDB(){
+  return new Promise((res,rej)=>{
+    const r=indexedDB.open('TechOS_v3',1);
+    r.onerror=()=>rej(r.error);
+    r.onsuccess=()=>{db=r.result;res()};
+    r.onupgradeneeded=e=>{
+      const d=e.target.result;
+      ['clientes','os','estoque','fornecedores','financeiro','docs'].forEach(s=>{
+        if(!d.objectStoreNames.contains(s))
+          d.createObjectStore(s,s==='docs'?{keyPath:'key'}:{keyPath:'id',autoIncrement:true});
+      });
+    };
+  });
+}
+function dbAll(s){return new Promise((r,j)=>{const t=db.transaction(s,'readonly');const q=t.objectStore(s).getAll();q.onsuccess=()=>r(q.result);q.onerror=()=>j()})}
+function dbPut(s,d){return new Promise((r,j)=>{const t=db.transaction(s,'readwrite');const q=t.objectStore(s).put(d);q.onsuccess=()=>r(q.result);q.onerror=()=>j()})}
+function dbDel(s,id){return new Promise((r,j)=>{const t=db.transaction(s,'readwrite');const q=t.objectStore(s).delete(id);q.onsuccess=()=>r();q.onerror=()=>j()})}
+function dbGet(s,k){return new Promise((r,j)=>{const t=db.transaction(s,'readonly');const q=t.objectStore(s).get(k);q.onsuccess=()=>r(q.result);q.onerror=()=>j()})}
+
+// ══════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════
+const R=(v)=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const D=(d)=>d?new Date(d).toLocaleDateString('pt-BR'):'—';
+const pad=(n)=>String(n).padStart(4,'0');
+function sbadge(s){const m={'Orçamento Pendente':'b-or','Orçamento Aprovado':'b-gr','Aguardando Peça':'b-pu','Em Manutenção':'b-bl','Pronto para Retirada':'b-gr','Entregue':'b-gy','Cancelado':'b-rd'};return`<span class="badge ${m[s]||'b-gy'}">${s}</span>`}
+function tel2wa(t){return(t||'').replace(/\D/g,'')}
+
+// ══════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════
+function toggleSB(){document.getElementById('sidebar').classList.toggle('collapsed')}
+function toggleDrawer(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('ov').classList.toggle('open')}
+function closeDrawer(){document.getElementById('sidebar').classList.remove('open');document.getElementById('ov').classList.remove('open')}
+function toggleMM(){document.getElementById('mmenu').classList.toggle('open')}
+function closeMM(){document.getElementById('mmenu').classList.remove('open')}
+document.addEventListener('click',e=>{const m=document.getElementById('mmenu'),b=document.getElementById('bn-more');if(m.classList.contains('open')&&!m.contains(e.target)&&!b.contains(e.target))closeMM()});
+
+const PG={
+  dashboard:{title:'Dashboard',act:''},
+  os:{title:'Ordens de Serviço',act:'<button class="btn btn-p" onclick="openOS()">+ Nova OS</button>'},
+  clientes:{title:'Clientes',act:'<button class="btn btn-p" onclick="openCli()">+ Novo Cliente</button>'},
+  estoque:{title:'Estoque',act:'<button class="btn btn-p" onclick="openEst()">+ Nova Peça</button>'},
+  fornecedores:{title:'Fornecedores',act:'<button class="btn btn-p" onclick="openForn()">+ Novo Fornecedor</button>'},
+  financeiro:{title:'Financeiro',act:'<button class="btn btn-p" onclick="openFin()">+ Lançamento</button>'},
+  termo:{title:'Termo de Uso',act:'<button class="btn btn-t" onclick="exportPDF(\'termo\')">📄 PDF</button>'},
+  garantia:{title:'Termo de Garantia',act:'<button class="btn btn-t" onclick="exportPDF(\'garantia\')">📄 PDF</button>'},
+  usuarios:{title:'Gerenciar Usuários',act:'<button class="btn btn-p" onclick="openUser()">+ Novo Usuário</button>'},
+};
+let curPage='dashboard';
+const BNAV_MAP={dashboard:0,os:1,clientes:2,financeiro:3};
+
+function go(p){
+  closeDrawer();closeMM();
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.ni').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.bn').forEach(x=>x.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  document.querySelectorAll('.ni').forEach(x=>{if((x.getAttribute('onclick')||'').includes("'"+p+"'"))x.classList.add('active')});
+  if(BNAV_MAP[p]!==undefined)document.querySelectorAll('.bn')[BNAV_MAP[p]].classList.add('active');
+  else document.querySelectorAll('.bn')[4].classList.add('active');
+  curPage=p;
+  document.getElementById('pg-title').textContent=PG[p]?.title||p;
+  document.getElementById('pg-actions').innerHTML=PG[p]?.act||'';
+  renderPage(p);
+}
+
+async function renderPage(p){
+  if(p==='dashboard')await renderDash();
+  else if(p==='os')await renderOS();
+  else if(p==='clientes')await renderClientes();
+  else if(p==='estoque')await renderEstoque();
+  else if(p==='fornecedores')await renderForn();
+  else if(p==='financeiro')await renderFin();
+  else if(p==='termo')await loadDoc('termo');
+  else if(p==='garantia')await loadDoc('garantia');
+  else if(p==='usuarios')await renderUsuarios();
+}
+
+function fabAct(){const m={os:'openOS',clientes:'openCli',estoque:'openEst',fornecedores:'openForn',financeiro:'openFin'};if(m[curPage])window[m[curPage]]();else{go('os');openOS()}}
+
+// MODALS
+function openM(id){document.getElementById(id).classList.add('open')}
+function closeM(id){document.getElementById(id).classList.remove('open')}
+document.querySelectorAll('.mo').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')}));
+
+// ══════════════════════════════════════
+//  DASHBOARD
+// ══════════════════════════════════════
+async function renderDash(){
+  const [os,clis,est,fin]=await Promise.all([dbAll('os'),dbAll('clientes'),dbAll('estoque'),dbAll('financeiro')]);
+  const abertas=os.filter(o=>!['Entregue','Cancelado'].includes(o.status)).length;
+  const prontas=os.filter(o=>o.status==='Pronto para Retirada').length;
+  const mes=new Date().toISOString().slice(0,7);
+  const rec=fin.filter(f=>f.tipo==='receita'&&(f.data||'').startsWith(mes)).reduce((a,f)=>a+Number(f.valor||0),0);
+  const desp=fin.filter(f=>f.tipo==='despesa'&&(f.data||'').startsWith(mes)).reduce((a,f)=>a+Number(f.valor||0),0);
+  document.getElementById('dash-stats').innerHTML=`
+    <div class="sc"><div class="sc-ico">📋</div><div class="sc-lbl">OS Abertas</div><div class="sc-val" style="color:var(--accent)">${abertas}</div><div class="sc-sub">em andamento</div></div>
+    <div class="sc"><div class="sc-ico">✅</div><div class="sc-lbl">Prontas p/ Retirada</div><div class="sc-val" style="color:var(--orange)">${prontas}</div><div class="sc-sub">aguardando</div></div>
+    <div class="sc"><div class="sc-ico">👥</div><div class="sc-lbl">Clientes</div><div class="sc-val">${clis.length}</div><div class="sc-sub">cadastrados</div></div>
+    <div class="sc"><div class="sc-ico">💰</div><div class="sc-lbl">Receita Mês</div><div class="sc-val" style="color:var(--green);font-size:17px">${R(rec)}</div><div class="sc-sub">lucro: ${R(rec-desp)}</div></div>`;
+  const baixo=est.filter(e=>Number(e.qtd||0)<=Number(e.min||0));
+  const ob=document.getElementById('sb-os-b'),bb=document.getElementById('bn-os-b'),sb=document.getElementById('sb-est-b');
+  [ob,bb].forEach(x=>{x.style.display=abertas?'':'none';x.textContent=abertas});
+  sb.style.display=baixo.length?'':'none';
+  let al='';
+  if(prontas)al+=`<div class="alerta" style="background:var(--al);border-color:#bfdbfe;color:#1e40af">📱 <b>${prontas} aparelho(s)</b> prontos para retirada!</div>`;
+  if(baixo.length)al+=`<div class="alerta">⚠️ <b>${baixo.length} peça(s)</b> com estoque baixo: ${baixo.map(e=>e.nome).join(', ')}</div>`;
+  document.getElementById('dash-alerts').innerHTML=al;
+  const recent=[...os].sort((a,b)=>(b.id||0)-(a.id||0)).slice(0,8);
+  const cm=Object.fromEntries(clis.map(c=>[c.id,c.nome]));
+  document.getElementById('dash-tbl').innerHTML=recent.length?recent.map(o=>`<tr><td><b style="font-family:var(--mono)">OS-${pad(o.id)}</b></td><td>${cm[o.clienteId]||'—'}</td><td>${o.marca||''} ${o.modelo||''}</td><td>${sbadge(o.status)}</td><td>${R(o.total)}</td><td>${D(o.criadoEm)}</td></tr>`).join(''):'<tr><td colspan="6"><div class="empty"><div class="ei">📋</div><p>Nenhuma OS</p></div></td></tr>';
+  document.getElementById('dash-cards').innerHTML=recent.map(o=>`<div class="mc"><div class="mc-top"><div><div class="mc-title">OS-${pad(o.id)} · ${o.marca} ${o.modelo}</div><div class="mc-sub">${cm[o.clienteId]||'—'}</div></div>${sbadge(o.status)}</div><div class="mc-row"><span>Total</span><span>${R(o.total)}</span></div><div class="mc-row"><span>Data</span><span>${D(o.criadoEm)}</span></div></div>`).join('');
+}
+
+// ══════════════════════════════════════
+//  OS
+// ══════════════════════════════════════
+let osEid=null,osPecas=[],curDetOS=null;
+async function renderOS(){
+  let lista=await dbAll('os');const clis=await dbAll('clientes');const cm=Object.fromEntries(clis.map(c=>[c.id,c]));
+  const q=(document.getElementById('os-search')?.value||'').toLowerCase();const sf=document.getElementById('os-sf')?.value||'';
+  if(q)lista=lista.filter(o=>{const c=cm[o.clienteId];return(c&&c.nome.toLowerCase().includes(q))||String(o.id).includes(q)||(o.modelo||'').toLowerCase().includes(q)});
+  if(sf)lista=lista.filter(o=>o.status===sf);
+  lista=lista.sort((a,b)=>(b.id||0)-(a.id||0));
+  document.getElementById('os-tbl').innerHTML=lista.length?lista.map(o=>{const c=cm[o.clienteId];return`<tr><td><b style="font-family:var(--mono)">OS-${pad(o.id)}</b></td><td>${c?c.nome:'—'}</td><td>${o.marca||''} ${o.modelo||''}</td><td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.defeito||'—'}</td><td>${sbadge(o.status)}</td><td>${R(o.total)}</td><td>${D(o.criadoEm)}</td><td style="display:flex;gap:4px"><button class="btn btn-g btn-sm" onclick="viewOS(${o.id})">👁</button><button class="btn btn-g btn-sm" onclick="openOS(${o.id})">✏️</button>${c?`<button class="btn btn-g btn-sm" onclick="waMsg('${c.telefone}','${c.nome}','${o.status}',${o.id})">📱</button>`:''}<button class="btn btn-g btn-sm" style="color:var(--red)" onclick="delOS(${o.id})">🗑</button></td></tr>`}).join(''):'<tr><td colspan="8"><div class="empty"><div class="ei">📋</div><p>Nenhuma OS</p></div></td></tr>';
+  document.getElementById('os-cards').innerHTML=lista.map(o=>{const c=cm[o.clienteId];return`<div class="mc"><div class="mc-top"><div><div class="mc-title">OS-${pad(o.id)} · ${o.marca} ${o.modelo}</div><div class="mc-sub">${c?c.nome:'—'}</div></div>${sbadge(o.status)}</div><div class="mc-row"><span>Defeito</span><span style="text-align:right;max-width:55%">${o.defeito||'—'}</span></div><div class="mc-row"><span>Total</span><span>${R(o.total)}</span></div><div class="mc-row"><span>Data</span><span>${D(o.criadoEm)}</span></div><div class="mc-act"><button class="btn btn-g btn-sm" onclick="viewOS(${o.id})">👁 Ver</button><button class="btn btn-g btn-sm" onclick="openOS(${o.id})">✏️ Editar</button>${c?`<button class="btn btn-g btn-sm" onclick="waMsg('${c.telefone}','${c.nome}','${o.status}',${o.id})">📱</button>`:''}<button class="btn btn-g btn-sm" style="color:var(--red);flex:0" onclick="delOS(${o.id})">🗑</button></div></div>`}).join('');
+}
+async function openOS(id=null){
+  osEid=id;osPecas=[];document.getElementById('m-os-tit').textContent=id?'Editar OS':'Nova OS';document.getElementById('os-total-v').textContent='R$ 0,00';document.getElementById('os-pecas-wrap').innerHTML='';
+  const clis=await dbAll('clientes');const sel=document.getElementById('os-cli');sel.innerHTML='<option value="">Selecionar...</option>'+clis.map(c=>`<option value="${c.id}">${c.nome} — ${c.telefone}</option>`).join('');
+  if(id){const o=(await dbAll('os')).find(x=>x.id===id);if(o){sel.value=o.clienteId||'';document.getElementById('os-marca').value=o.marca||'';document.getElementById('os-modelo').value=o.modelo||'';document.getElementById('os-imei').value=o.imei||'';document.getElementById('os-senha').value=o.senha||'';document.getElementById('os-defeito').value=o.defeito||'';document.getElementById('os-laudo').value=o.laudo||'';document.getElementById('os-mo').value=o.mo||'';document.getElementById('os-desc').value=o.desconto||'';document.getElementById('os-gar').value=o.garantia||90;document.getElementById('os-stat').value=o.status||'Orçamento Pendente';osPecas=o.pecas||[];renderPecas();}}
+  else{['os-marca','os-modelo','os-imei','os-senha','os-defeito','os-laudo','os-mo','os-desc'].forEach(i=>document.getElementById(i).value='');document.getElementById('os-gar').value=90;document.getElementById('os-stat').value='Orçamento Pendente';}
+  calcOS();openM('m-os');
+}
+function calcOS(){const mo=Number(document.getElementById('os-mo').value||0);const dc=Number(document.getElementById('os-desc').value||0);const tp=osPecas.reduce((a,p)=>a+p.preco*p.qtd,0);document.getElementById('os-total-v').textContent=R(Math.max(0,mo+tp-dc))}
+function renderPecas(){document.getElementById('os-pecas-wrap').innerHTML=osPecas.map((p,i)=>`<div style="display:flex;align-items:center;gap:7px;background:var(--bg);padding:7px 10px;border-radius:6px;font-size:13px"><span style="flex:1"><b>${p.nome}</b> × ${p.qtd} = ${R(p.preco*p.qtd)}</span><button class="btn btn-g btn-sm" style="color:var(--red)" onclick="removePeca(${i})">✕</button></div>`).join('');calcOS()}
+function removePeca(i){osPecas.splice(i,1);renderPecas()}
+async function openAddPeca(){const est=await dbAll('estoque');const sel=document.getElementById('ap-peca');sel.innerHTML=est.map(e=>`<option value="${e.id}" data-p="${e.venda}">${e.nome} (${e.qtd||0}) — ${R(e.venda)}</option>`).join('');sel.onchange=()=>{document.getElementById('ap-preco').value=sel.options[sel.selectedIndex]?.dataset.p||0};if(est.length)document.getElementById('ap-preco').value=est[0].venda||0;document.getElementById('ap-qtd').value=1;openM('m-peca')}
+async function addPeca(){const est=await dbAll('estoque');const id=Number(document.getElementById('ap-peca').value);const peca=est.find(e=>e.id===id);if(!peca)return;osPecas.push({pecaId:id,nome:peca.nome,qtd:Number(document.getElementById('ap-qtd').value||1),preco:Number(document.getElementById('ap-preco').value||0)});renderPecas();closeM('m-peca')}
+async function saveOS(){const clienteId=Number(document.getElementById('os-cli').value);const marca=document.getElementById('os-marca').value.trim();const modelo=document.getElementById('os-modelo').value.trim();const defeito=document.getElementById('os-defeito').value.trim();if(!clienteId||!marca||!modelo||!defeito){alert('Preencha: Cliente, Marca, Modelo e Defeito.');return}const mo=Number(document.getElementById('os-mo').value||0);const dc=Number(document.getElementById('os-desc').value||0);const tp=osPecas.reduce((a,p)=>a+p.preco*p.qtd,0);const total=Math.max(0,mo+tp-dc);const status=document.getElementById('os-stat').value;const data={clienteId,marca,modelo,imei:document.getElementById('os-imei').value,senha:document.getElementById('os-senha').value,defeito,laudo:document.getElementById('os-laudo').value,mo,desconto:dc,total,status,garantia:Number(document.getElementById('os-gar').value||90),pecas:osPecas};if(osEid){const old=(await dbAll('os')).find(x=>x.id===osEid);Object.assign(data,{id:osEid,criadoEm:old.criadoEm})}else data.criadoEm=new Date().toISOString();await dbPut('os',data);closeM('m-os');osPecas=[];renderPage(curPage)}
+async function delOS(id){if(!confirm('Excluir OS?'))return;await dbDel('os',id);renderPage(curPage)}
+async function viewOS(id){const[lista,clis]=await Promise.all([dbAll('os'),dbAll('clientes')]);const o=lista.find(x=>x.id===id);if(!o)return;const c=clis.find(x=>x.id===o.clienteId);curDetOS={o,c};document.getElementById('det-tit').textContent=`OS-${pad(id)} · ${o.marca} ${o.modelo}`;document.getElementById('det-body').innerHTML=`<div class="odd"><div class="db"><h4>Cliente</h4><div class="dr"><span>Nome</span><span>${c?.nome||'—'}</span></div><div class="dr"><span>Tel.</span><span>${c?.telefone||'—'}</span></div></div><div class="db"><h4>Aparelho</h4><div class="dr"><span>Modelo</span><span>${o.marca} ${o.modelo}</span></div><div class="dr"><span>Status</span><span>${o.status}</span></div></div></div><div class="db" style="margin-bottom:10px"><h4>Defeito</h4><p style="font-size:13px;margin-top:5px">${o.defeito||'—'}</p></div><div class="db" style="margin-bottom:10px"><h4>Laudo</h4><p style="font-size:13px;margin-top:5px">${o.laudo||'—'}</p></div>${o.pecas?.length?`<div class="db" style="margin-bottom:10px"><h4>Peças</h4>${o.pecas.map(p=>`<div class="dr"><span>${p.nome} × ${p.qtd}</span><span>${R(p.preco*p.qtd)}</span></div>`).join('')}</div>`:''}<div style="background:var(--al);border-radius:8px;padding:12px;margin-bottom:8px"><div class="dr"><span>Mão de Obra</span><span>${R(o.mo)}</span></div><div class="dr"><span>Desconto</span><span style="color:var(--red)">- ${R(o.desconto)}</span></div><div class="dr" style="font-size:16px;font-weight:800;border-top:1px solid var(--border);padding-top:7px;margin-top:5px"><span>Total</span><span style="color:var(--accent)">${R(o.total)}</span></div></div>${o.garantia?`<p style="font-size:11px;color:var(--muted);font-family:var(--mono)">Garantia: ${o.garantia} dias</p>`:''}`;openM('m-det')}
+function waMsg(tel,nome,status,id){const n=tel2wa(tel);const msgs={'Pronto para Retirada':`Olá ${nome}! 🎉 Seu aparelho está pronto para retirada. OS-${pad(id)}.`,'Orçamento Pendente':`Olá ${nome}! O orçamento está pronto. OS-${pad(id)}.`};const msg=msgs[status]||`Olá ${nome}! Etapa atual: *${status}*. OS-${pad(id)}.`;window.open(`https://wa.me/55${n}?text=${encodeURIComponent(msg)}`,'_blank')}
+function waOK(){if(curDetOS){const{o,c}=curDetOS;waMsg(c?.telefone||'',c?.nome||'',o.status,o.id)}}
+function printOS(){if(!curDetOS)return;const{o,c}=curDetOS;const w=window.open('','_blank');w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>OS-${pad(o.id)}</title><style>body{font-family:Arial,sans-serif;max-width:680px;margin:0 auto;padding:22px;font-size:13px}h1{font-size:20px}.s{color:#555;font-size:12px;margin-bottom:18px}.sec{margin-bottom:14px;padding:12px;border:1px solid #ddd;border-radius:6px}h3{font-size:11px;text-transform:uppercase;color:#888;margin-bottom:7px}.row{display:flex;justify-content:space-between;margin-bottom:3px}.tot{font-size:17px;font-weight:bold;color:#1d4ed8}.terms{font-size:10px;color:#999;margin-top:18px;padding-top:10px;border-top:1px solid #ddd;line-height:1.7}@media print{body{padding:0}}</style></head><body><h1>🔧 Ordem de Serviço</h1><div class="s">OS-${pad(o.id)} · ${D(o.criadoEm)}</div><div class="sec"><h3>Cliente</h3><div class="row"><span>Nome:</span><span>${c?.nome||'—'}</span></div><div class="row"><span>Tel.:</span><span>${c?.telefone||'—'}</span></div></div><div class="sec"><h3>Aparelho</h3><div class="row"><span>Modelo:</span><span>${o.marca} ${o.modelo}</span></div><div class="row"><span>Defeito:</span><span>${o.defeito||'—'}</span></div><div class="row"><span>Laudo:</span><span>${o.laudo||'Aguardando'}</span></div></div><div class="sec"><h3>Valores</h3>${(o.pecas||[]).map(p=>`<div class="row"><span>${p.nome} × ${p.qtd}</span><span>${R(p.preco*p.qtd)}</span></div>`).join('')}<div class="row"><span>Mão de Obra:</span><span>${R(o.mo)}</span></div><div class="row"><span>Desconto:</span><span>- ${R(o.desconto)}</span></div><hr><div class="row tot"><span>TOTAL:</span><span>${R(o.total)}</span></div><div class="row" style="margin-top:7px"><span>Garantia:</span><span>${o.garantia||90} dias</span></div></div><div class="terms">1) Aparelhos não retirados em 90 dias serão considerados abandonados. 2) Não nos responsabilizamos por perda de dados. 3) Garantia cobre exclusivamente o defeito descrito.<br><br>Assinatura: ___________________________________ Data: ___/___/______</div></body></html>`);w.document.close();w.print()}
+
+// ══════════════════════════════════════
+//  CLIENTES
+// ══════════════════════════════════════
+let cliEid=null;
+async function renderClientes(q=''){let lista=await dbAll('clientes');const os=await dbAll('os');if(q)lista=lista.filter(c=>(c.nome||'').toLowerCase().includes(q.toLowerCase())||(c.cpf||'').includes(q)||(c.telefone||'').includes(q));lista=lista.sort((a,b)=>(b.id||0)-(a.id||0));document.getElementById('cli-tbl').innerHTML=lista.length?lista.map(c=>{const osc=os.filter(o=>o.clienteId===c.id);const tot=osc.filter(o=>o.status==='Entregue').reduce((a,o)=>a+Number(o.total||0),0);return`<tr><td><b>${c.nome}</b></td><td style="font-family:var(--mono);font-size:11px">${c.cpf||'—'}</td><td><a href="https://wa.me/55${tel2wa(c.telefone)}" target="_blank" style="color:var(--green)">${c.telefone||'—'}</a></td><td>${c.email||'—'}</td><td><span class="badge b-bl">${osc.length}</span></td><td style="font-weight:600;color:var(--green)">${R(tot)}</td><td><button class="btn btn-g btn-sm" onclick="openCli(${c.id})">✏️</button> <button class="btn btn-g btn-sm" style="color:var(--red)" onclick="delCli(${c.id})">🗑</button></td></tr>`}).join(''):'<tr><td colspan="7"><div class="empty"><div class="ei">👥</div><p>Nenhum cliente</p></div></td></tr>';document.getElementById('cli-cards').innerHTML=lista.map(c=>{const osc=os.filter(o=>o.clienteId===c.id);return`<div class="mc"><div class="mc-top"><div><div class="mc-title">${c.nome}</div><div class="mc-sub">${c.cpf||''}</div></div><span class="badge b-bl">${osc.length} OS</span></div><div class="mc-row"><span>Tel.</span><span>${c.telefone||'—'}</span></div><div class="mc-row"><span>E-mail</span><span>${c.email||'—'}</span></div><div class="mc-act"><button class="btn btn-g btn-sm" onclick="openCli(${c.id})">✏️</button><button class="btn btn-g btn-sm" style="color:var(--red)" onclick="delCli(${c.id})">🗑</button></div></div>`}).join('')}
+function openCli(id=null){cliEid=id;document.getElementById('m-cli-tit').textContent=id?'Editar Cliente':'Novo Cliente';['cli-nome','cli-cpf','cli-tel','cli-email','cli-end','cli-obs'].forEach(i=>document.getElementById(i).value='');if(id){dbAll('clientes').then(l=>{const c=l.find(x=>x.id===id);if(c){document.getElementById('cli-nome').value=c.nome||'';document.getElementById('cli-cpf').value=c.cpf||'';document.getElementById('cli-tel').value=c.telefone||'';document.getElementById('cli-email').value=c.email||'';document.getElementById('cli-end').value=c.endereco||'';document.getElementById('cli-obs').value=c.obs||''}})}openM('m-cli')}
+async function saveCli(){const nome=document.getElementById('cli-nome').value.trim();const tel=document.getElementById('cli-tel').value.trim();if(!nome||!tel){alert('Nome e Telefone obrigatórios.');return}const d={nome,cpf:document.getElementById('cli-cpf').value,telefone:tel,email:document.getElementById('cli-email').value,endereco:document.getElementById('cli-end').value,obs:document.getElementById('cli-obs').value};if(cliEid)d.id=cliEid;else d.criadoEm=new Date().toISOString();await dbPut('clientes',d);closeM('m-cli');renderPage(curPage)}
+async function delCli(id){if(!confirm('Excluir cliente?'))return;await dbDel('clientes',id);renderPage(curPage)}
+
+// ══════════════════════════════════════
+//  ESTOQUE
+// ══════════════════════════════════════
+let estEid=null;
+async function renderEstoque(q=''){let lista=await dbAll('estoque');if(q)lista=lista.filter(e=>(e.nome||'').toLowerCase().includes(q.toLowerCase())||(e.cat||'').toLowerCase().includes(q.toLowerCase()));lista=lista.sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));const baixo=lista.filter(e=>Number(e.qtd||0)<=Number(e.min||0));document.getElementById('est-alerta').innerHTML=baixo.length?`<div class="alerta">⚠️ ${baixo.length} peça(s) abaixo do mínimo: <b>${baixo.map(e=>e.nome).join(', ')}</b></div>`:'';document.getElementById('est-tbl').innerHTML=lista.length?lista.map(e=>{const ab=Number(e.qtd||0)<=Number(e.min||0);return`<tr><td><b>${e.nome}</b></td><td>${e.cat||'—'}</td><td style="font-size:11px;color:var(--muted)">${e.compat||'—'}</td><td style="font-family:var(--mono)">${R(e.custo)}</td><td style="font-family:var(--mono)">${R(e.venda)}</td><td><span class="badge ${ab?'b-rd':'b-gr'}">${e.qtd||0}</span></td><td style="font-size:11px">${e.min||0}</td><td><button class="btn btn-g btn-sm" onclick="openEst(${e.id})">✏️</button> <button class="btn btn-g btn-sm" style="color:var(--red)" onclick="delEst(${e.id})">🗑</button></td></tr>`}).join(''):'<tr><td colspan="8"><div class="empty"><div class="ei">📦</div><p>Nenhuma peça</p></div></td></tr>';document.getElementById('est-cards').innerHTML=lista.map(e=>{const ab=Number(e.qtd||0)<=Number(e.min||0);return`<div class="mc"><div class="mc-top"><div><div class="mc-title">${e.nome}</div><div class="mc-sub">${e.cat||''}</div></div><span class="badge ${ab?'b-rd':'b-gr'}">${e.qtd||0} un.</span></div><div class="mc-row"><span>Venda</span><span>${R(e.venda)}</span></div><div class="mc-act"><button class="btn btn-g btn-sm" onclick="openEst(${e.id})">✏️</button><button class="btn btn-g btn-sm" style="color:var(--red)" onclick="delEst(${e.id})">🗑</button></div></div>`}).join('')}
+function openEst(id=null){estEid=id;document.getElementById('m-est-tit').textContent=id?'Editar Peça':'Nova Peça';['est-nome','est-compat','est-custo','est-venda','est-qtd','est-min'].forEach(i=>document.getElementById(i).value='');if(id){dbAll('estoque').then(l=>{const e=l.find(x=>x.id===id);if(e){document.getElementById('est-nome').value=e.nome||'';document.getElementById('est-cat').value=e.cat||'Tela';document.getElementById('est-compat').value=e.compat||'';document.getElementById('est-custo').value=e.custo||'';document.getElementById('est-venda').value=e.venda||'';document.getElementById('est-qtd').value=e.qtd||'';document.getElementById('est-min').value=e.min||''}})}openM('m-est')}
+async function saveEst(){const nome=document.getElementById('est-nome').value.trim();if(!nome){alert('Nome obrigatório.');return}const d={nome,cat:document.getElementById('est-cat').value,compat:document.getElementById('est-compat').value,custo:Number(document.getElementById('est-custo').value||0),venda:Number(document.getElementById('est-venda').value||0),qtd:Number(document.getElementById('est-qtd').value||0),min:Number(document.getElementById('est-min').value||2)};if(estEid)d.id=estEid;await dbPut('estoque',d);closeM('m-est');renderPage(curPage)}
+async function delEst(id){if(!confirm('Excluir peça?'))return;await dbDel('estoque',id);renderPage(curPage)}
+
+// ══════════════════════════════════════
+//  FORNECEDORES
+// ══════════════════════════════════════
+let fornEid=null;
+async function renderForn(q=''){let lista=await dbAll('fornecedores');if(q)lista=lista.filter(f=>(f.emp||'').toLowerCase().includes(q.toLowerCase())||(f.vend||'').toLowerCase().includes(q.toLowerCase()));document.getElementById('forn-tbl').innerHTML=lista.length?lista.map(f=>`<tr><td><b>${f.emp}</b></td><td>${f.vend||'—'}</td><td><a href="https://wa.me/55${tel2wa(f.whats)}" target="_blank" style="color:var(--green)">${f.whats||'—'}</a></td><td>${f.email||'—'}</td><td style="font-size:11px;color:var(--muted)">${f.cats||'—'}</td><td><button class="btn btn-g btn-sm" onclick="openForn(${f.id})">✏️</button> <button class="btn btn-g btn-sm" style="color:var(--red)" onclick="delForn(${f.id})">🗑</button></td></tr>`).join(''):'<tr><td colspan="6"><div class="empty"><div class="ei">🏭</div><p>Nenhum fornecedor</p></div></td></tr>';document.getElementById('forn-cards').innerHTML=lista.map(f=>`<div class="mc"><div class="mc-top"><div><div class="mc-title">${f.emp}</div><div class="mc-sub">${f.vend||''}</div></div></div><div class="mc-row"><span>WhatsApp</span><span>${f.whats||'—'}</span></div><div class="mc-act"><button class="btn btn-g btn-sm" onclick="openForn(${f.id})">✏️</button><button class="btn btn-g btn-sm" style="color:var(--red)" onclick="delForn(${f.id})">🗑</button></div></div>`).join('')}
+function openForn(id=null){fornEid=id;['forn-emp','forn-vend','forn-whats','forn-email','forn-cats','forn-obs'].forEach(i=>document.getElementById(i).value='');if(id){dbAll('fornecedores').then(l=>{const f=l.find(x=>x.id===id);if(f){document.getElementById('forn-emp').value=f.emp||'';document.getElementById('forn-vend').value=f.vend||'';document.getElementById('forn-whats').value=f.whats||'';document.getElementById('forn-email').value=f.email||'';document.getElementById('forn-cats').value=f.cats||'';document.getElementById('forn-obs').value=f.obs||''}})}openM('m-forn')}
+async function saveForn(){const emp=document.getElementById('forn-emp').value.trim();if(!emp){alert('Empresa obrigatória.');return}const d={emp,vend:document.getElementById('forn-vend').value,whats:document.getElementById('forn-whats').value,email:document.getElementById('forn-email').value,cats:document.getElementById('forn-cats').value,obs:document.getElementById('forn-obs').value};if(fornEid)d.id=fornEid;await dbPut('fornecedores',d);closeM('m-forn');renderPage(curPage)}
+async function delForn(id){if(!confirm('Excluir fornecedor?'))return;await dbDel('fornecedores',id);renderPage(curPage)}
+
+// ══════════════════════════════════════
+//  FINANCEIRO
+// ══════════════════════════════════════
+async function renderFin(){let lista=await dbAll('financeiro');const mes=document.getElementById('fin-mes')?.value||'';const tp=document.getElementById('fin-tp')?.value||'';if(mes)lista=lista.filter(f=>(f.data||'').startsWith(mes));const rec=lista.filter(f=>f.tipo==='receita').reduce((a,f)=>a+Number(f.valor||0),0);const desp=lista.filter(f=>f.tipo==='despesa').reduce((a,f)=>a+Number(f.valor||0),0);document.getElementById('fin-sum').innerHTML=`<div class="fcard"><div class="fcard-lbl">💰 Receitas</div><div class="fcard-val" style="color:var(--green)">${R(rec)}</div></div><div class="fcard"><div class="fcard-lbl">💸 Despesas</div><div class="fcard-val" style="color:var(--red)">${R(desp)}</div></div><div class="fcard"><div class="fcard-lbl">📈 Lucro</div><div class="fcard-val" style="color:${rec-desp>=0?'var(--green)':'var(--red)'}">${R(rec-desp)}</div></div>`;if(tp)lista=lista.filter(f=>f.tipo===tp);lista=lista.sort((a,b)=>(b.data||'').localeCompare(a.data||''));document.getElementById('fin-tbl').innerHTML=lista.length?lista.map(f=>`<tr><td style="font-family:var(--mono);font-size:11px">${D(f.data)}</td><td>${f.tipo==='receita'?'<span class="badge b-gr">Receita</span>':'<span class="badge b-rd">Despesa</span>'}</td><td>${f.cat||'—'}</td><td>${f.desc||'—'}</td><td style="font-family:var(--mono);font-weight:600;color:${f.tipo==='receita'?'var(--green)':'var(--red)'}">${f.tipo==='receita'?'+':'−'} ${R(f.valor)}</td><td><button class="btn btn-g btn-sm" style="color:var(--red)" onclick="delFin(${f.id})">🗑</button></td></tr>`).join(''):'<tr><td colspan="6"><div class="empty"><div class="ei">💰</div><p>Nenhum lançamento</p></div></td></tr>';document.getElementById('fin-cards').innerHTML=lista.map(f=>`<div class="mc"><div class="mc-top"><div><div class="mc-title">${f.desc||f.cat||'Lançamento'}</div><div class="mc-sub">${D(f.data)}</div></div>${f.tipo==='receita'?'<span class="badge b-gr">Receita</span>':'<span class="badge b-rd">Despesa</span>'}</div><div class="mc-row"><span>Valor</span><span style="font-weight:700;color:${f.tipo==='receita'?'var(--green)':'var(--red)'}">${f.tipo==='receita'?'+':'−'} ${R(f.valor)}</span></div><div class="mc-act"><button class="btn btn-g btn-sm" style="color:var(--red)" onclick="delFin(${f.id})">🗑</button></div></div>`).join('')}
+function openFin(){document.getElementById('fin-data').value=new Date().toISOString().slice(0,10);['fin-cat','fin-desc','fin-val'].forEach(i=>document.getElementById(i).value='');openM('m-fin')}
+async function saveFin(){const val=Number(document.getElementById('fin-val').value||0);const dt=document.getElementById('fin-data').value;if(!val||!dt){alert('Valor e Data obrigatórios.');return}await dbPut('financeiro',{tipo:document.getElementById('fin-tipo').value,data:dt,cat:document.getElementById('fin-cat').value,valor:val,desc:document.getElementById('fin-desc').value});closeM('m-fin');renderPage(curPage)}
+async function delFin(id){if(!confirm('Excluir?'))return;await dbDel('financeiro',id);renderPage(curPage)}
+
+// ══════════════════════════════════════
+//  DOCUMENTOS
+// ══════════════════════════════════════
+const DEFAULTS={
+  termo:`<h2 style="text-align:center">TERMO DE USO — ORDEM DE SERVIÇO</h2><p style="text-align:center"><b>Assistência Técnica TechOS</b></p><br><p>Ao entregar seu aparelho, o cliente declara que leu e concorda com os termos abaixo:</p><br><h3>1. ORÇAMENTO</h3><p>O cliente será consultado antes do início dos serviços. A aprovação pode ser feita presencialmente ou por WhatsApp.</p><br><h3>2. PRAZO DE RETIRADA</h3><p>Aparelhos não retirados em <b>90 dias</b> após a conclusão serão considerados abandonados.</p><br><h3>3. DADOS</h3><p>A empresa não se responsabiliza pela perda de dados. Recomendamos backup prévio.</p><br><h3>4. DANOS POR LÍQUIDO</h3><p>Aparelhos com oxidação não possuem garantia de funcionamento contínuo.</p><br><h3>5. GARANTIA</h3><p>A garantia cobre exclusivamente o defeito descrito na OS, não se aplicando a novos danos.</p><br><p>_______________________________, _____ de _____________ de _______.</p><br><p>Assinatura do Cliente: ____________________________________________</p><p>Assinatura Técnico: _______________________________________________</p>`,
+  garantia:`<h2 style="text-align:center">CERTIFICADO DE GARANTIA</h2><p style="text-align:center"><b>Assistência Técnica TechOS</b></p><br><p>Este certificado atesta que o serviço realizado está coberto por garantia conforme as condições abaixo.</p><br><table style="width:100%;border-collapse:collapse;font-size:13px"><tr><td style="padding:6px 10px;border:1px solid #ddd;font-weight:600;background:#f9f9f9;width:35%">Nº da OS</td><td style="padding:6px 10px;border:1px solid #ddd">{os}</td></tr><tr><td style="padding:6px 10px;border:1px solid #ddd;font-weight:600;background:#f9f9f9">Cliente</td><td style="padding:6px 10px;border:1px solid #ddd">{cliente}</td></tr><tr><td style="padding:6px 10px;border:1px solid #ddd;font-weight:600;background:#f9f9f9">Aparelho</td><td style="padding:6px 10px;border:1px solid #ddd">{aparelho}</td></tr><tr><td style="padding:6px 10px;border:1px solid #ddd;font-weight:600;background:#f9f9f9">Data do Serviço</td><td style="padding:6px 10px;border:1px solid #ddd">{data}</td></tr><tr><td style="padding:6px 10px;border:1px solid #ddd;font-weight:600;background:#f9f9f9">Garantia</td><td style="padding:6px 10px;border:1px solid #ddd"><b>{garantia_dias} dias</b></td></tr></table><br><h3>CONDIÇÕES</h3><ol><li>A garantia cobre exclusivamente o defeito descrito na OS.</li><li>Não cobre danos por quedas, líquidos, mau uso ou reparos por terceiros.</li><li>Apresentar este certificado ao solicitar garantia.</li><li>Garantia intransferível, válida somente para o cliente indicado.</li><li>Peças substituídas tornam-se propriedade da assistência técnica.</li></ol><br><p>Data de Emissão: {data}</p><br><p>Assinatura Técnico: _____________________________________________</p><p style="font-size:11px;color:#888;margin-top:16px">Guarde este documento durante o período de garantia.</p>`
+};
+async function loadDoc(key){const rec=await dbGet('docs',key);document.getElementById('editor-'+key).innerHTML=rec?rec.html:DEFAULTS[key];document.getElementById(key+'-st').textContent='Salvo';document.getElementById(key+'-ft').textContent='Última edição: '+(rec?.updatedAt?new Date(rec.updatedAt).toLocaleString('pt-BR'):'—')}
+function markDirty(key){document.getElementById(key+'-st').textContent='● Não salvo'}
+async function salvarDoc(key){const html=document.getElementById('editor-'+key).innerHTML;const now=new Date().toISOString();await dbPut('docs',{key,html,updatedAt:now});document.getElementById(key+'-st').textContent='Salvo ✓';document.getElementById(key+'-ft').textContent='Última edição: '+new Date(now).toLocaleString('pt-BR')}
+async function resetDoc(key){if(!confirm('Restaurar padrão?'))return;await dbPut('docs',{key,html:DEFAULTS[key],updatedAt:new Date().toISOString()});document.getElementById('editor-'+key).innerHTML=DEFAULTS[key];document.getElementById(key+'-st').textContent='Restaurado ✓'}
+function ef(cmd){document.execCommand(cmd,false,null)}function efb(tag){document.execCommand('formatBlock',false,tag)}
+function efg(cmd){document.execCommand(cmd,false,null)}function efbg(tag){document.execCommand('formatBlock',false,tag)}
+async function exportPDF(key){await salvarDoc(key);const rec=await dbGet('docs',key);gerarPDF(key==='termo'?'Termo_de_Uso':'Termo_de_Garantia',rec?rec.html:DEFAULTS[key])}
+function gerarPDF(title,htmlContent){
+  const{jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const tmp=document.createElement('div');tmp.innerHTML=htmlContent;tmp.style.cssText='position:fixed;top:-9999px;left:-9999px;width:170mm;font-family:Arial,sans-serif;font-size:12px;line-height:1.6';document.body.appendChild(tmp);
+  const pw=190,ml=15,lh=6;let y=20;doc.setFontSize(10);
+  function addLine(text,opts={}){if(y>278){doc.addPage();y=15}if(opts.h1){doc.setFontSize(15);doc.setFont(undefined,'bold')}else if(opts.h2){doc.setFontSize(13);doc.setFont(undefined,'bold')}else if(opts.h3){doc.setFontSize(11);doc.setFont(undefined,'bold')}else if(opts.bold){doc.setFontSize(10);doc.setFont(undefined,'bold')}else{doc.setFontSize(9.5);doc.setFont(undefined,'normal')}const wrapped=doc.splitTextToSize(text,pw-ml*2);wrapped.forEach(l=>{if(y>278){doc.addPage();y=15}const align=opts.center?'center':'left';doc.text(l,align==='center'?105:ml,y,{align});y+=lh});if(opts.h1||opts.h2||opts.h3)y+=2}
+  function walk(node){if(node.nodeType===3){const t=node.textContent.replace(/\s+/g,' ').trim();if(t)addLine(t);return}const tag=(node.tagName||'').toLowerCase();if(tag==='br'){y+=3;return}if(tag==='h1')addLine(node.textContent.trim(),{h1:true,center:true});else if(tag==='h2')addLine(node.textContent.trim(),{h2:true,center:node.style?.textAlign==='center'});else if(tag==='h3')addLine(node.textContent.trim(),{h3:true});else if(tag==='p'||tag==='div'){const t=node.textContent.trim();if(t)addLine(t,{center:node.style?.textAlign==='center'});else y+=3}else if(tag==='b'||tag==='strong')addLine(node.textContent.trim(),{bold:true});else if(tag==='li')addLine('• '+node.textContent.trim());else if(tag==='tr'){const cells=[...node.querySelectorAll('td,th')];if(cells.length===2)addLine(cells[0].textContent.trim()+': '+cells[1].textContent.trim());else node.childNodes.forEach(c=>walk(c))}else node.childNodes.forEach(c=>walk(c))}
+  tmp.childNodes.forEach(n=>walk(n));document.body.removeChild(tmp);doc.save(title+'.pdf');
+}
+async function exportGarOSMenu(){const lista=await dbAll('os');const clis=await dbAll('clientes');const sel=document.getElementById('gar-os-sel');sel.innerHTML=lista.sort((a,b)=>(b.id||0)-(a.id||0)).map(o=>{const c=clis.find(x=>x.id===o.clienteId);return`<option value="${o.id}">OS-${pad(o.id)} · ${o.marca} ${o.modelo} — ${c?.nome||'?'}</option>`}).join('');openM('m-gar-os')}
+function exportGarOSfromDet(){if(curDetOS){exportGarOSMenu().then(()=>{document.getElementById('gar-os-sel').value=curDetOS.o.id;closeM('m-det')})}else exportGarOSMenu()}
+async function doExportGarOS(){const id=Number(document.getElementById('gar-os-sel').value);if(!id){alert('Selecione uma OS.');return}const[lista,clis]=await Promise.all([dbAll('os'),dbAll('clientes')]);const o=lista.find(x=>x.id===id);const c=clis.find(x=>x.id===o?.clienteId);const rec=await dbGet('docs','garantia');let html=rec?rec.html:DEFAULTS.garantia;html=html.replace(/\{os\}/g,`OS-${pad(o.id)}`).replace(/\{cliente\}/g,c?.nome||'—').replace(/\{aparelho\}/g,`${o.marca} ${o.modelo}`).replace(/\{data\}/g,new Date().toLocaleDateString('pt-BR')).replace(/\{garantia_dias\}/g,String(o.garantia||90));closeM('m-gar-os');gerarPDF(`Garantia_OS-${pad(o.id)}`,html)}
+
+// ══════════════════════════════════════
+//  BACKUP
+// ══════════════════════════════════════
+async function exportDB(){const[clis,os,est,forn,fin,docs]=await Promise.all([dbAll('clientes'),dbAll('os'),dbAll('estoque'),dbAll('fornecedores'),dbAll('financeiro'),dbAll('docs')]);const blob=new Blob([JSON.stringify({v:3,at:new Date().toISOString(),clis,os,est,forn,fin,docs},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`TechOS_backup_${new Date().toISOString().slice(0,10)}.json`;a.click()}
+function importDB(){if(!confirm('Isso substituirá todos os dados atuais. Continuar?'))return;document.getElementById('imp-file').click()}
+async function processImport(e){const f=e.target.files[0];if(!f)return;const data=JSON.parse(await f.text());for(const[store,key]of[['clientes','clis'],['os','os'],['estoque','est'],['fornecedores','forn'],['financeiro','fin'],['docs','docs']]){if(data[key]){const tx=db.transaction(store,'readwrite');const st=tx.objectStore(store);await new Promise(r=>{st.clear().onsuccess=r});for(const item of data[key])await dbPut(store,item)}}alert('Backup importado!');renderPage(curPage);e.target.value=''}
+
+// ══════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════
+(function(){
+  loadConfig();
+  // Verifica sessão ativa
+  const saved = sessionStorage.getItem('techos_user');
+  if(saved){
+    try{
+      currentUser = JSON.parse(saved);
+      enterApp();
+      return;
+    }catch(e){}
+  }
+  // Mostra login
+  document.body.className = '';
+})();
+</script>
+</body>
+</html>
