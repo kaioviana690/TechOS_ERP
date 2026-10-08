@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TechOS – Login</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --border: #2a2d3a;
+    --accent: #6c63ff;
+    --accent-h: #857dff;
+    --text: #e2e4ef;
+    --muted: #7b7f96;
+    --danger: #e05c5c;
+    --success: #4caf82;
+    --radius: 12px;
+    --shadow: 0 8px 32px rgba(0,0,0,.45);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100dvh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  /* background glow */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse 60% 50% at 50% 0%, rgba(108,99,255,.18) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 40px 36px 36px;
+    width: 100%;
+    max-width: 420px;
+    position: relative;
+    z-index: 1;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 28px;
+  }
+  .logo-icon {
+    width: 40px; height: 40px;
+    background: linear-gradient(135deg, var(--accent), #a78bfa);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  .logo-name { font-size: 22px; font-weight: 700; letter-spacing: -.5px; }
+  .logo-name span { color: var(--accent); }
+  h2 { font-size: 18px; font-weight: 600; margin-bottom: 6px; }
+  .subtitle { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+
+  /* config section */
+  .config-toggle {
+    font-size: 12px; color: var(--muted);
+    cursor: pointer; display: flex; align-items: center; gap: 4px;
+    margin-bottom: 16px; user-select: none;
+  }
+  .config-toggle:hover { color: var(--accent); }
+  .config-section {
+    background: rgba(255,255,255,.03);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 20px;
+    display: none;
+  }
+  .config-section.open { display: block; }
+  .config-section label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; display: block; margin-bottom: 5px; }
+  .config-section input {
+    width: 100%; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 7px; padding: 8px 10px; color: var(--text); font-size: 13px; margin-bottom: 10px;
+  }
+  .config-section input:focus { outline: none; border-color: var(--accent); }
+  .btn-save-config {
+    width: 100%; padding: 8px; background: transparent;
+    border: 1px solid var(--accent); border-radius: 7px;
+    color: var(--accent); font-size: 13px; cursor: pointer;
+  }
+  .btn-save-config:hover { background: rgba(108,99,255,.15); }
+
+  .field { margin-bottom: 18px; }
+  .field label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 6px; }
+  .field input {
+    width: 100%; background: rgba(255,255,255,.04);
+    border: 1px solid var(--border); border-radius: 9px;
+    padding: 12px 14px; color: var(--text); font-size: 15px;
+    transition: border-color .2s;
+  }
+  .field input:focus { outline: none; border-color: var(--accent); background: rgba(108,99,255,.06); }
+
+  .btn-login {
+    width: 100%; padding: 13px;
+    background: linear-gradient(135deg, var(--accent), #a78bfa);
+    border: none; border-radius: 9px;
+    color: #fff; font-size: 15px; font-weight: 600;
+    cursor: pointer; transition: opacity .2s, transform .1s;
+    margin-top: 4px;
+  }
+  .btn-login:hover { opacity: .9; }
+  .btn-login:active { transform: scale(.98); }
+  .btn-login:disabled { opacity: .5; cursor: not-allowed; }
+
+  .msg {
+    margin-top: 14px; padding: 10px 12px;
+    border-radius: 8px; font-size: 13px; display: none;
+  }
+  .msg.error  { background: rgba(224,92,92,.12); border: 1px solid rgba(224,92,92,.3); color: #e87878; display: block; }
+  .msg.success{ background: rgba(76,175,130,.12); border: 1px solid rgba(76,175,130,.3); color: #5dcb9a; display: block; }
+
+  .footer { margin-top: 28px; text-align: center; font-size: 12px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <div class="logo-icon">🔧</div>
+    <div class="logo-name">Tech<span>OS</span></div>
+  </div>
+  <h2>Bem-vindo de volta</h2>
+  <p class="subtitle">Acesse o sistema de gestão da sua assistência</p>
+
+  <div class="config-toggle" onclick="toggleConfig()">⚙️ Configurar conexão Supabase <span id="cfg-arrow">▼</span></div>
+  <div class="config-section" id="cfgSection">
+    <label>URL do Projeto</label>
+    <input type="text" id="cfgUrl" placeholder="https://xxxx.supabase.co">
+    <label>Anon Key</label>
+    <input type="text" id="cfgKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+    <button class="btn-save-config" onclick="salvarConfig()">Salvar Configuração</button>
+  </div>
+
+  <div class="field">
+    <label>E-mail</label>
+    <input type="email" id="loginEmail" placeholder="seu@email.com" autocomplete="username">
+  </div>
+  <div class="field">
+    <label>Senha</label>
+    <input type="password" id="loginSenha" placeholder="••••••••" autocomplete="current-password">
+  </div>
+  <button class="btn-login" id="btnLogin" onclick="fazerLogin()">Entrar</button>
+  <div class="msg" id="msgBox"></div>
+  <div class="footer">TechOS ERP · Assistência Técnica</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+let supaClient = null;
+
+function getConfig() {
+  return {
+    url: localStorage.getItem('supa_url') || '',
+    key: localStorage.getItem('supa_key') || ''
+  };
+}
+
+function toggleConfig() {
+  const s = document.getElementById('cfgSection');
+  const a = document.getElementById('cfg-arrow');
+  const open = s.classList.toggle('open');
+  a.textContent = open ? '▲' : '▼';
+  if (open) {
+    const c = getConfig();
+    document.getElementById('cfgUrl').value = c.url;
+    document.getElementById('cfgKey').value = c.key;
+  }
+}
+
+function salvarConfig() {
+  const url = document.getElementById('cfgUrl').value.trim();
+  const key = document.getElementById('cfgKey').value.trim();
+  if (!url || !key) { showMsg('Preencha URL e Key.', 'error'); return; }
+  localStorage.setItem('supa_url', url);
+  localStorage.setItem('supa_key', key);
+  supaClient = null;
+  showMsg('Configuração salva!', 'success');
+  document.getElementById('cfgSection').classList.remove('open');
+  document.getElementById('cfg-arrow').textContent = '▼';
+}
+
+function getClient() {
+  if (supaClient) return supaClient;
+  const { url, key } = getConfig();
+  if (!url || !key) return null;
+  supaClient = supabase.createClient(url, key);
+  return supaClient;
+}
+
+function showMsg(txt, tipo) {
+  const el = document.getElementById('msgBox');
+  el.textContent = txt;
+  el.className = 'msg ' + tipo;
+}
+
+async function carregarPerfil(client, userId) {
+  const { data, error } = await client
+    .from('usuarios')
+    .select('id, nome, email, role, ativo')
+    .eq('auth_user_id', userId)
+    .single();
+
+  if (error || !data || !data.ativo) return null;
+  return data;
+}
+
+async function fazerLogin() {
+  const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+  const senha = document.getElementById('loginSenha').value;
+  if (!email || !senha) { showMsg('Preencha e-mail e senha.', 'error'); return; }
+
+  const client = getClient();
+  if (!client) {
+    showMsg('Configure a conexão Supabase primeiro (⚙️ acima).', 'error');
+    toggleConfig();
+    return;
+  }
+
+  const btn = document.getElementById('btnLogin');
+  btn.disabled = true;
+  btn.textContent = 'Entrando…';
+
+  try {
+    const { data, error } = await client.auth.signInWithPassword({ email, password: senha });
+    if (error) {
+      showMsg(error.message, 'error');
+      return;
+    }
+
+    const perfil = await carregarPerfil(client, data.user.id);
+    if (!perfil) {
+      await client.auth.signOut();
+      showMsg('Usuário não encontrado ou inativo.', 'error');
+      return;
+    }
+
+    await client.from('usuarios').update({
+      ultimo_acesso: new Date().toISOString()
+    }).eq('id', perfil.id);
+
+    showMsg('Login efetuado! Redirecionando…', 'success');
+    setTimeout(() => { window.location.href = 'app.html'; }, 800);
+  } catch (e) {
+    showMsg('Erro de conexão: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Entrar';
+  }
+}
+
+async function verificarSessaoLogin() {
+  const client = getClient();
+  if (!client) return;
+  const { data } = await client.auth.getSession();
+  if (!data.session) return;
+
+  const perfil = await carregarPerfil(client, data.session.user.id);
+  if (perfil) window.location.href = 'app.html';
+}
+
+// Enter para logar
+document.addEventListener('keydown', e => { if (e.key === 'Enter') fazerLogin(); });
+verificarSessaoLogin();
+</script>
+</body>
+</html>
